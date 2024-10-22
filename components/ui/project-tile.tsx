@@ -34,7 +34,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
   };
 
   return (
-    <Card className="flex flex-col h-full w-full max-w-sm bg-card text-white border border-white/10 transition-all hover:shadow-lg">
+    <Card className="flex flex-col h-full w-full max-w-sm bg-muted text-white border border-white/10 transition-all hover:shadow-lg">
       <CardHeader>
         <div className="flex justify-between items-start">
           <h3 className="text-lg font-semibold">{project.name}</h3>
@@ -44,7 +44,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
         <p className="text-sm text-white/70 mb-4">{shortenDescription(project.description)}</p>
         <div className="flex flex-wrap gap-2 mb-4">
           {project.techStack.map((tech, index) => (
-            <Badge key={index} variant="secondary" className="transition-colors hover:bg-white/20">{tech}</Badge>
+            <Badge key={index} variant="default" className="transition-colors hover:bg-white/20">{tech}</Badge>
           ))}
         </div>
         <div className="flex flex-wrap space-x-2 overflow-hidden mb-4">

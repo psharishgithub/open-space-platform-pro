@@ -14,7 +14,7 @@ import { useUser } from '@/components/user-context'
 interface ProjectUser {
   id: string
   githubUsername: string
-  role: 'OWNER' | 'CONTRIBUTOR'
+  role: 'OWNER' | 'AUTHOR'
 }
 
 interface Repository {
@@ -43,7 +43,7 @@ export default function UploadProjectsPage() {
     imageUrl: ''
   })
   const [projectUsers, setProjectUsers] = useState<ProjectUser[]>([])
-  const [newProjectUser, setNewProjectUser] = useState({ githubUsername: '', role: 'CONTRIBUTOR' as const })
+  const [newProjectUser, setNewProjectUser] = useState({ githubUsername: '', role: 'AUTHOR' as const })
   const [errors, setErrors] = useState<Partial<typeof project & { projectUsers: string }>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -61,7 +61,7 @@ export default function UploadProjectsPage() {
       imageUrl: ''
     });
     setProjectUsers(user && user.githubUsername ? [{ id: user.id, githubUsername: user.githubUsername, role: 'OWNER' }] : []);
-    setNewProjectUser({ githubUsername: '', role: 'CONTRIBUTOR' });
+    setNewProjectUser({ githubUsername: '', role: 'AUTHOR' });
     setErrors({});
     setSubmitStatus('idle');
   };
@@ -145,7 +145,7 @@ export default function UploadProjectsPage() {
   const addProjectUser = () => {
     if (newProjectUser.githubUsername) {
       setProjectUsers(prev => [...prev, { ...newProjectUser, id: Date.now().toString() }])
-      setNewProjectUser({ githubUsername: '', role: 'CONTRIBUTOR' })
+      setNewProjectUser({ githubUsername: '', role: 'AUTHOR' })
       setErrors(prev => ({ ...prev, projectUsers: undefined }))
     }
   }
@@ -155,15 +155,15 @@ export default function UploadProjectsPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validateForm() || !user) return
-
-    setIsSubmitting(true)
-    setSubmitStatus('idle')
-    setErrorMessage('')
-
+    e.preventDefault();
+    if (!validateForm() || !user || !selectedRepo) return;
+  
+    setIsSubmitting(true);
+    setSubmitStatus('idle');
+    setErrorMessage('');
+  
     try {
-      const response = await fetch('/api/projects/post-project', {
+      const postProjectResponse = await fetch('/api/projects/post-project', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -174,30 +174,51 @@ export default function UploadProjectsPage() {
           users: projectUsers.map(({ githubUsername, role }) => ({ githubUsername, role })),
           ownerId: user.id,
         }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
+      });
+  
+      if (!postProjectResponse.ok) {
+        const errorData = await postProjectResponse.json();
         if (errorData.error === 'Project with this GitHub URL already exists') {
-          setErrorMessage('A project with this GitHub URL already exists. Please check the URL or use a different one.')
+          setErrorMessage('A project with this GitHub URL already exists. Please check the URL or use a different one.');
         } else {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          throw new Error(`HTTP error! status: ${postProjectResponse.status}`);
         }
-        setSubmitStatus('error')
-        return
+        setSubmitStatus('error');
+        return;
       }
+  
+      const projectData = await postProjectResponse.json();
+      console.log('Project created:', projectData);
+  
 
-      const data = await response.json()
-      console.log('Project created:', data)
-      setSubmitStatus('success')
+      const webhookResponse = await fetch('/api/github/webhook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          reponame: selectedRepo.name,
+        }),
+      });
+  
+      if (!webhookResponse.ok) {
+        throw new Error(`Failed to set up webhook! status: ${webhookResponse.status}`);
+      }
+  
+      const webhookData = await webhookResponse.json();
+      console.log('Webhook setup successful:', webhookData);
+  
+      setSubmitStatus('success');
     } catch (error) {
-      console.error('Error creating project:', error)
-      setSubmitStatus('error')
-      setErrorMessage(error instanceof Error ? error.message : 'An unknown error occurred')
+      console.error('Error during project submission or webhook setup:', error);
+      setSubmitStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : 'An unknown error occurred');
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
+  
 
   if (!user) {
     return <div className="flex items-center justify-center h-screen">Please log in to create a project.</div>
@@ -312,7 +333,7 @@ export default function UploadProjectsPage() {
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="CONTRIBUTOR">Contributor</SelectItem>
+                    <SelectItem value="AUTHOR">AUTHOR</SelectItem>
                     <SelectItem value="OWNER">Owner</SelectItem>
                   </SelectContent>
                 </Select>
