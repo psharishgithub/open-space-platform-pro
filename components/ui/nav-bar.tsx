@@ -3,17 +3,14 @@
 import {
   NavigationMenu,
   NavigationMenuContent,
-  NavigationMenuIndicator,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-
-} from "@/components/ui/navigation-menu"
-
-import React from "react";
+} from "@/components/ui/navigation-menu";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "../user-context";
 import { Button } from "./button";
 import { signOut, useSession } from "next-auth/react";
@@ -24,15 +21,20 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-
+} from "@/components/ui/dropdown-menu";
+import { Menu } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 export default function Navbar() {
   const pathname = usePathname();
   const routeName = pathname === "/" ? "" : `/${pathname.slice(1)}`;
   const { user } = useUser();
-  const { data: session } = useSession()
-
+  const { data: session } = useSession();
+  const [isOpen, setIsOpen] = useState(false);
 
   const getUserInitials = (name: string) => {
     return name
@@ -41,76 +43,110 @@ export default function Navbar() {
       .join("");
   };
 
+  const NavItems = () => (
+    <>
+      <NavigationMenuItem>
+        <Link href="/dashboard" legacyBehavior passHref>
+          <NavigationMenuLink className="px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
+            Dashboard
+          </NavigationMenuLink>
+        </Link>
+      </NavigationMenuItem>
+      <NavigationMenuItem>
+        <Link href="/explore-projects" legacyBehavior passHref>
+          <NavigationMenuLink className="px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
+            Explore Projects
+          </NavigationMenuLink>
+        </Link>
+      </NavigationMenuItem>
+    </>
+  );
+
   return (
-    <header className="sticky top-0 w-full pt-6 pb-6 ps-5  bg-neutral-900 bg-opacity-30 backdrop-blur-lg z-50">
-      <div className="w-full flex justify-between items-center h-auto px-4">
-        <Link href="/" className="text-4xl font-bold text-primary" aria-label="Home">
+    <header className="sticky top-0 w-full py-4 px-4 bg-neutral-900 bg-opacity-30 backdrop-blur-lg z-50">
+      <div className="w-full flex justify-between items-center h-auto max-w-7xl mx-auto">
+        <Link href="/" className="text-3xl font-bold text-primary" aria-label="Home">
           /Open-Space
           {routeName && <span className="text-stone-500">{routeName}</span>}
         </Link>
-        {session ?
-
-          <div className="flex items-center space-x-4">
-            <NavigationMenu>
-              <NavigationMenuList className="flex space-x-4">
-                <NavigationMenuItem>
-                  <Link href="/upload-project" legacyBehavior passHref>
-                    <Button>Post Project</Button>
+        
+        {session ? (
+          <>
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-4">
+              <NavigationMenu>
+                <NavigationMenuList className="flex space-x-4">
+                  <NavItems />
+                </NavigationMenuList>
+              </NavigationMenu>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="h-8 w-8 cursor-pointer">
+                    <AvatarImage
+                      src={user?.githubAvatarUrl}
+                      alt="User avatar"
+                      className="h-full w-full object-cover rounded-full"
+                    />
+                    <AvatarFallback className="rounded-full">
+                      {user?.name ? getUserInitials(user.name) : "NN"}
+                    </AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <Link href="/profile">
+                    <DropdownMenuItem>Profile</DropdownMenuItem>
                   </Link>
-                </NavigationMenuItem>
-              </NavigationMenuList>
-            </NavigationMenu>
-            <NavigationMenu>
-              <NavigationMenuList className="flex space-x-4">
-                <NavigationMenuItem>
-                  <Link href="/dashboard" legacyBehavior passHref>
-                    <NavigationMenuLink className="px-3 py-2 text-md font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-                      Dashboard
-                    </NavigationMenuLink>
-                  </Link>
-                </NavigationMenuItem>
-              </NavigationMenuList>
-            </NavigationMenu>
+                  <DropdownMenuItem onClick={() => signOut()}>
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
-
-            <NavigationMenu>
-              <NavigationMenuList className="flex space-x-4">
-                <NavigationMenuItem>
-                  <Link href="/explore-projects" legacyBehavior passHref>
-                    <NavigationMenuLink className="px-3 py-2 text-md font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-                      Explore Projects
-                    </NavigationMenuLink>
-                  </Link>
-                </NavigationMenuItem>
-              </NavigationMenuList>
-            </NavigationMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild><Avatar className="h-10 w-10 rounded-full">
-                <AvatarImage
-                  src={user?.githubAvatarUrl}
-                  alt="User avatar"
-                  className="h-full w-full object-cover rounded-3xl"
-                />
-                <AvatarFallback className="h-full w-full flex items-center justify-center text-sm font-medium">
-                  {user?.name ? getUserInitials(user.name) : "NN"}
-                </AvatarFallback>
-              </Avatar></DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <Link href="/profile">
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                </Link>
-                <DropdownMenuItem onClick={async () => await signOut()}>Logout</DropdownMenuItem>
-
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-
-
-
-          </div> : <Button>Login</Button>
-        }
+            {/* Mobile Navigation */}
+            <div className="md:hidden">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-6 w-6" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent>
+                  <div className="flex flex-col space-y-4 mt-4">
+                    <Link href="/dashboard" className="w-full">
+                      <Button variant="ghost" className="w-full justify-start">
+                        Dashboard
+                      </Button>
+                    </Link>
+                    <Link href="/explore-projects" className="w-full">
+                      <Button variant="ghost" className="w-full justify-start">
+                        Explore Projects
+                      </Button>
+                    </Link>
+                    <div className="my-2 border-t border-border" />
+                    <Link href="/profile" className="w-full">
+                      <Button variant="ghost" className="w-full justify-start">
+                        Profile
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                      onClick={() => signOut()}
+                    >
+                      Logout
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+          </>
+        ) : (
+          <Button>Login</Button>
+        )}
       </div>
     </header>
   );

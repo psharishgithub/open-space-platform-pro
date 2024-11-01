@@ -25,61 +25,90 @@ interface ProjectCardProps {
     pullRequests: number;
     stars: number;
   };
+  onClick?: () => void;
 }
 
-const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
+const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
   const shortenDescription = (desc: string | null, maxLength: number = 100) => {
     if (!desc) return '';
     return desc.length > maxLength ? `${desc.substring(0, maxLength)}...` : desc;
   };
 
   return (
-    <Card className="flex flex-col h-full w-full max-w-sm bg-card text-white border border-white/10 transition-all hover:shadow-lg">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <h3 className="text-lg font-semibold">{project.name}</h3>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-grow"> 
-        <p className="text-sm text-white/70 mb-4">{shortenDescription(project.description)}</p>
-        <div className="flex flex-wrap gap-2 mb-4">
-          {project.techStack.map((tech, index) => (
-            <Badge key={index} variant="secondary" className="transition-colors hover:bg-white/20">{tech}</Badge>
-          ))}
-        </div>
-        <div className="flex flex-wrap space-x-2 overflow-hidden mb-4">
-          {project.users.slice(0, 3).map((projectUser, index) => (
-            <span key={index} className="bg-white/10 text-white text-sm px-2 py-1 rounded">
-              {projectUser.user.githubUsername} 
-            </span>
-          ))}
-          {project.users.length > 3 && (
-            <span className="bg-white/10 text-white text-sm px-2 py-1 rounded">
-              +{project.users.length - 3}
-            </span>
-          )}
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-between items-center mt-auto"> 
-        <div className="flex items-center space-x-3"> 
-          <Badge variant="outline" className="flex items-center space-x-1 border-white/30 hover:bg-white/10 transition-colors">
-            <GitPullRequest size={14} />
-            <span>{project.pullRequests}</span>
-          </Badge>
-          <Badge variant="outline" className="flex items-center space-x-1 border-white/30 hover:bg-white/10 transition-colors">
-            <Star size={14} />
-            <span>{project.stars}</span>
-          </Badge>
-        </div>
-        <Link href={project.githubUrl} aria-label={`View ${project.name} on GitHub`}>
-          <Button 
-            variant="outline" 
-            className="h-10 text-white border-white/30 hover:bg-white/10 transition-colors" 
-          >
-            <Github className="h-4 w-4" />
-          </Button>
-        </Link>
-      </CardFooter>
+    <Card 
+      className="relative group flex flex-col h-full w-full max-w-sm overflow-hidden cursor-pointer" 
+      onClick={onClick}
+    >
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      
+      <div className="relative flex flex-col h-full bg-black/40 backdrop-blur-sm border border-white/5">
+        <CardHeader className="space-y-3">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <h3 className="text-lg font-medium text-white group-hover:text-primary transition-colors">
+                {project.name}
+              </h3>
+              <div className="flex items-center space-x-2 text-xs text-white/60">
+                <span>{project.language}</span>
+                <span>•</span>
+                <div className="flex items-center space-x-1">
+                  <Star size={12} className="text-yellow-500" />
+                  <span>{project.stars}</span>
+                </div>
+                <span>•</span>
+                <div className="flex items-center space-x-1">
+                  <GitPullRequest size={12} />
+                  <span>{project.pullRequests}</span>
+                </div>
+              </div>
+            </div>
+            <Link 
+              href={project.githubUrl} 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+            >
+              <Github className="h-4 w-4" />
+            </Link>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="flex-grow space-y-4">
+          <p className="text-sm text-white/60 leading-relaxed">
+            {shortenDescription(project.description)}
+          </p>
+          
+          <div className="flex flex-wrap gap-1.5">
+            {project.techStack.map((tech, index) => (
+              <Badge 
+                key={index} 
+                variant="secondary" 
+                className="bg-white/5 hover:bg-white/10 text-white/80 border-0"
+              >
+                {tech}
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+
+        <CardFooter className="pt-4 border-t border-white/5">
+          <div className="flex flex-wrap gap-2">
+            {project.users.slice(0, 3).map((projectUser, index) => (
+              <div 
+                key={index} 
+                className="px-2 py-1 text-xs bg-white/5 text-white/70 rounded-sm"
+              >
+                @{projectUser.user.githubUsername}
+              </div>
+            ))}
+            {project.users.length > 3 && (
+              <div className="px-2 py-1 text-xs bg-white/5 text-white/70 rounded-sm">
+                +{project.users.length - 3}
+              </div>
+            )}
+          </div>
+        </CardFooter>
+      </div>
     </Card>
   );
 };

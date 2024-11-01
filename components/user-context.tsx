@@ -13,28 +13,63 @@ type User = {
   githubProfileUrl?: string;
   githubUsername?: string;
   joinDate?: string;
+  projects?: {
+    role: string;
+    project: {
+      id: string;
+      name: string;
+      description: string | null;
+      githubUrl: string;
+      techStack: string[];
+      imageUrl: string | null;
+    };
+  }[];
 } | null;
 
-type UserContextType = {
-  user: User;
+export interface UserContextType {
+  user: {
+    id: string;
+    name: string;
+    bio: string | null;
+    email: string;
+    githubAvatarUrl?: string;
+    rank?: string;
+    githubProfileUrl?: string;
+    githubUsername?: string;
+    joinDate?: string;
+    projects?: {
+      role: string;
+      project: {
+        id: string;
+        name: string;
+        description: string | null;
+        githubUrl: string;
+        techStack: string[];
+        imageUrl: string | null;
+      };
+    }[];
+  } | null;
+  updateUser: (user: any) => void;
   setUser: Dispatch<SetStateAction<User>>;
-};
-
+}
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(null);
-  const { data: session, status } = useSession(); 
+  const { data: session, status } = useSession();
+
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+  };
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.email) {
-      
       fetch('/api/user')
         .then((res) => res.json())
         .then((data) => {
           if (!data.error) {
-            setUser(data); 
+            setUser(data);
           }
         })
         .catch((error) => console.error('Error fetching user data:', error));
@@ -42,7 +77,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [session, status]);
 
   return (
-    <UserContext.Provider value={{ user, setUser }}>
+    <UserContext.Provider value={{ user, setUser, updateUser }}>
       {children}
     </UserContext.Provider>
   );

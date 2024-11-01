@@ -4,7 +4,28 @@ import { prisma } from '@/lib/prisma'
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, description, githubUrl, techStack, imageUrl, users } = body;
+    const { 
+      name, 
+      description, 
+      githubUrl, 
+      demoUrl,
+      techStack, 
+      imageUrl, 
+      users,
+      problemStatement,
+      status,
+      projectType,
+      keyFeatures,
+      academicHighlights,
+      projectImages
+    } = body;
+
+
+    if (!name || !description || !problemStatement || !projectType || !status) {
+      return NextResponse.json({ 
+        error: 'Missing required fields. Name, description, problem statement, project type, and status are required.' 
+      }, { status: 400 });
+    }
 
 
     const existingProject = await prisma.project.findUnique({
@@ -12,20 +33,33 @@ export async function POST(request: Request) {
     });
 
     if (existingProject) {
-      return NextResponse.json({ error: 'Project with this GitHub URL already exists' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Project with this GitHub URL already exists' }, 
+        { status: 400 }
+      );
     }
 
-    if (!name || !githubUrl || !users || users.length === 0) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
 
     const project = await prisma.project.create({
       data: {
         name,
         description,
         githubUrl,
+        demoUrl,
         techStack,
         imageUrl,
+        problemStatement,
+        status,
+        projectType,
+        keyFeatures,
+        academicHighlights,
+        projectImages: {
+          create: projectImages.map((image: { url: string; title: string; description: string }) => ({
+            url: image.url,
+            title: image.title,
+            description: image.description
+          }))
+        },
         users: {
           create: await Promise.all(users.map(async (user: { githubUsername: string; role: string }) => {
             const dbUser = await prisma.user.findUnique({
@@ -37,9 +71,8 @@ export async function POST(request: Request) {
                 userId: dbUser.id,
                 role: user.role,
               };
-            } else {
-              return null;
             }
+            return null;
           })).then(results => results.filter(result => result !== null)),
         },
         pendingUsers: {
@@ -53,9 +86,8 @@ export async function POST(request: Request) {
                 githubUsername: user.githubUsername,
                 role: user.role,
               };
-            } else {
-              return null;
             }
+            return null;
           })).then(results => results.filter(result => result !== null)),
         },
       },
@@ -66,6 +98,7 @@ export async function POST(request: Request) {
           },
         },
         pendingUsers: true,
+        projectImages: true,
       },
     });
 
