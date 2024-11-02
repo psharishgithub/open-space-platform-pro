@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import {prisma }from '@/lib/prisma';
-
+import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: Request,
@@ -8,7 +7,9 @@ export async function GET(
 ) {
   try {
     const project = await prisma.project.findUnique({
-      where: { id: params.id },
+      where: {
+        id: params.id,
+      },
       include: {
         users: {
           include: {
@@ -16,6 +17,16 @@ export async function GET(
           },
         },
         projectImages: true,
+        tags: {
+          include: {
+            curator: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -26,13 +37,13 @@ export async function GET(
       );
     }
 
+    console.log('Project tags from database:', project.tags);
     return NextResponse.json(project);
   } catch (error) {
     console.error('Error fetching project:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: 'Failed to fetch project' },
       { status: 500 }
     );
   }
 }
-

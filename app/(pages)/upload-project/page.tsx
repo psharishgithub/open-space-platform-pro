@@ -16,8 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import Image from 'next/image'
 
 interface ProjectUser {
   id: string
@@ -30,15 +29,6 @@ interface Repository {
   full_name: string
   description: string
   html_url: string
-}
-
-interface User {
-  id: string
-  githubUsername: string
-}
-
-interface UploadProjectsPageProps {
-  user: User | null
 }
 
 interface ProjectImage {
@@ -63,7 +53,7 @@ const COMMON_TECHNOLOGIES: Technology[] = [
   { value: "postgresql", label: "PostgreSQL" },
   { value: "mongodb", label: "MongoDB" },
   { value: "prisma", label: "Prisma" },
-  // Add more common technologies as needed
+
 ]
 
 export default function UploadProjectsPage() {
@@ -89,7 +79,6 @@ export default function UploadProjectsPage() {
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
   const [repositories, setRepositories] = useState<Repository[]>([])
-  const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null)
   const [isLoadingRepos, setIsLoadingRepos] = useState(false)
   const [enableGithub, setEnableGithub] = useState(false)
   const [newImage, setNewImage] = useState<ProjectImage>({
@@ -98,7 +87,6 @@ export default function UploadProjectsPage() {
     description: ''
   })
   const { toast } = useToast()
-  const [techStackInput, setTechStackInput] = useState('')
 
   const resetForm = () => {
     setProject({
@@ -145,7 +133,6 @@ export default function UploadProjectsPage() {
   const handleRepoSelect = async (repoFullName: string) => {
     const selected = repositories.find(repo => repo.full_name === repoFullName)
     if (selected) {
-      setSelectedRepo(selected)
       setProject(prev => ({
         ...prev,
         githubUrl: selected.html_url,
@@ -285,7 +272,7 @@ export default function UploadProjectsPage() {
 
     try {
       new URL(newImage.url);
-    } catch (e) {
+    } catch {
       toast({
         title: "Invalid URL",
         description: "Please provide a valid image URL",
@@ -328,7 +315,6 @@ export default function UploadProjectsPage() {
       const newTechStack = [...currentTechStack, tech].join(', ')
       setProject(prev => ({ ...prev, techStack: newTechStack }))
     }
-    setTechStackInput('')
   }
 
   const removeTech = (techToRemove: string) => {
@@ -740,13 +726,14 @@ export default function UploadProjectsPage() {
                         />
                         {newImage.url && (
                           <div className="relative aspect-video overflow-hidden rounded-lg border bg-muted">
-                            <img
+                            <Image
                               src={newImage.url}
                               alt="Preview"
-                              className="object-cover w-full h-full"
+                              fill
+                              className="object-cover"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
-                                target.src = '/placeholder-image.png'; // You should add a placeholder image
+                                target.src = '/placeholder-image.png';
                               }}
                             />
                           </div>
@@ -787,11 +774,12 @@ export default function UploadProjectsPage() {
                     {project.projectImages.map((image, index) => (
                       <div key={index} className="space-y-3">
                         <div className="relative group">
-                          <div className="aspect-video overflow-hidden rounded-lg border bg-muted">
-                            <img
+                          <div className="relative aspect-video overflow-hidden rounded-lg border bg-muted">
+                            <Image
                               src={image.url}
                               alt={image.title}
-                              className="object-cover w-full h-full"
+                              fill
+                              className="object-cover"
                             />
                           </div>
                           <Button

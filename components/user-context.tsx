@@ -4,9 +4,10 @@ import { useSession } from 'next-auth/react';
 
 
 type User = {
+  role: string;
   id: string;
   name: string;
-  bio: string;
+  bio: string | null;
   email: string;
   githubAvatarUrl?: string;
   rank?: string;
@@ -28,6 +29,7 @@ type User = {
 
 export interface UserContextType {
   user: {
+    role: string;
     id: string;
     name: string;
     bio: string | null;
@@ -49,7 +51,7 @@ export interface UserContextType {
       };
     }[];
   } | null;
-  updateUser: (user: any) => void;
+  updateUser: (user: User) => void;
   setUser: Dispatch<SetStateAction<User>>;
 }
 

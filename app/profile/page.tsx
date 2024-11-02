@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Github, Mail, Calendar, Edit3, Code, GitPullRequest, GitMerge, Star, Activity } from "lucide-react";
+import { Github, Mail, Calendar, Edit3, Code, GitPullRequest, GitMerge,  Activity } from "lucide-react";
 import { useUser } from '@/components/user-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProjectCard from '@/components/ui/project-card';

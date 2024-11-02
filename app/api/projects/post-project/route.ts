@@ -52,7 +52,6 @@ export async function POST(request: Request) {
         status,
         projectType,
         keyFeatures,
-        academicHighlights,
         projectImages: {
           create: projectImages.map((image: { url: string; title: string; description: string }) => ({
             url: image.url,

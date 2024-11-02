@@ -1,24 +1,23 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Code, GitPullRequest, GitMerge, Activity, Mail, Github, Calendar } from "lucide-react";
+import { Edit3, Mail, Github, Calendar } from "lucide-react";
 import { useUser } from '@/components/user-context';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from "@/components/ui/progress";
-import ProjectCard from '@/components/ui/project-tile';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Edit3 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import Link from 'next/link';
-import { Edit2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Activity, Code, GitPullRequest, GitMerge, Edit2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ProjectCard from '@/components/ui/project-tile';
 
 interface ProjectUser {
   user: {
@@ -64,9 +63,39 @@ interface ValidationErrors {
   bio?: string;
 }
 
+interface TagFormData {
+  name: string;
+  projectId: string;
+  title: string;
+  status: typeof statusOptions[number];
+  conference: string;
+  date: string;
+  competition: string;
+}
+
+
+
+const statusOptions = [
+  'PUBLISHED',
+  'IN_REVIEW', 
+  'DRAFT',
+  'COMPLETED',
+  'ONGOING'
+] as const;
+
 export default function DashboardPage() {
   const { user, updateUser } = useUser();
   const [isEditing, setIsEditing] = useState(false);
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [tagFormData, setTagFormData] = useState<TagFormData>({
+    name: '',
+    projectId: '',
+    title: '',
+    status: 'PUBLISHED',
+    conference: '',
+    date: '',
+    competition: ''
+  });
   const [editableData, setEditableData] = useState<EditableProfileData>({
     name: '',
     bio: null
@@ -88,7 +117,7 @@ export default function DashboardPage() {
 
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
-    
+
     if (!editableData.name?.trim()) {
       newErrors.name = 'Name is required';
     }
@@ -138,6 +167,59 @@ export default function DashboardPage() {
     setIsEditing(open);
   };
 
+  const handleCreateTag = async () => {
+    try {
+      if (tagFormData.date && !isValidDate(tagFormData.date)) {
+        toast.error('Invalid date format');
+        return;
+      }
+
+      const response = await fetch('/api/tags', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...tagFormData,
+          date: tagFormData.date ? new Date(tagFormData.date).toISOString() : null,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        if (error instanceof Error) {
+          toast.error(error.message);
+        } else {
+          toast.error('Failed to create tag');
+        }
+        return;
+      }
+
+      toast.success('Tag created successfully');
+      setIsCreatingTag(false);
+      setTagFormData({
+        name: '',
+        projectId: '',
+        title: '',
+        status: 'PUBLISHED',
+        conference: '',
+        date: '',
+        competition: ''
+      });
+    } catch (error) {
+      console.error('Error creating tag:', error);
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('Failed to create tag');
+      }
+    }
+  };
+
+  const isValidDate = (dateString: string): boolean => {
+    const date = new Date(dateString);
+    return date instanceof Date && !isNaN(date.getTime());
+  };
 
   const ownedProjects: Project[] = (user.projects || [])
     .filter((p: ProjectWithRole) => p.role === 'OWNER')
@@ -148,7 +230,7 @@ export default function DashboardPage() {
       githubUrl: p.project.githubUrl,
       techStack: p.project.techStack,
       imageUrl: p.project.imageUrl,
-      users: [{ 
+      users: [{
         user: {
           name: user.name,
           githubAvatarUrl: user.githubAvatarUrl || null,
@@ -272,104 +354,217 @@ export default function DashboardPage() {
         </CardHeader>
       </Card>
 
-      <Card className="w-full mb-6 bg-card">
-        <CardHeader>
-          <h2 className="text-lg font-semibold">Activity Overview</h2>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <div className="flex justify-between mb-1">
-              <span className="text-sm font-medium text-muted-foreground">Total Projects</span>
-              <Badge variant="secondary" className="bg-secondary text-secondary-foreground">
-                <Activity size={14} className="mr-1" />
-                {ownedProjects.length}
-              </Badge>
-            </div>
-            <Progress value={ownedProjects.length} max={10} className="h-2 bg-secondary" />
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="bg-muted">
-              <CardContent className="flex flex-col items-center p-4">
-                <Code size={24} className="mb-2 text-muted-foreground" />
-                <Badge variant="secondary" className="text-lg font-semibold bg-secondary text-secondary-foreground">
-                  {ownedProjects.length}
-                </Badge>
-                <p className="text-sm text-muted-foreground mt-2">Projects Posted</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-muted">
-              <CardContent className="flex flex-col items-center p-4">
-                <GitPullRequest size={24} className="mb-2 text-muted-foreground" />
-                <Badge variant="secondary" className="text-lg font-semibold bg-secondary text-secondary-foreground">0</Badge>
-                <p className="text-sm text-muted-foreground mt-2">Projects Contributed</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-muted">
-              <CardContent className="flex flex-col items-center p-4">
-                <GitMerge size={24} className="mb-2 text-muted-foreground" />
-                <Badge variant="secondary" className="text-lg font-semibold bg-secondary text-secondary-foreground">0</Badge>
-                <p className="text-sm text-muted-foreground mt-2">Pull Requests Merged</p>
-              </CardContent>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="w-full">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <h2 className="text-lg font-semibold">Your Projects</h2>
-          <div className="flex gap-2">
-            <Link href="/edit-projects">
-              <Button variant="outline">
-                <Edit2 className="h-4 w-4 mr-2" />
-                Edit Projects
-              </Button>
-            </Link>
-            <Link href="/upload-project">
-              <Button variant="default">
-                <Code className="h-4 w-4 mr-2" />
-                Post New Project
-              </Button>
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="recent" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-muted">
-              <TabsTrigger value="recent" className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                Recent Projects
-              </TabsTrigger>
-              <TabsTrigger value="contributed" className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                Contributed Projects
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="recent" className="mt-6">
-              {ownedProjects.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No projects found. Start by creating a new project!
+      {user.role === 'CURATOR' ? (
+        <Card className="bg-card">
+          <CardHeader>
+            <h2 className="text-lg font-semibold">Create Academic Highlight Tag</h2>
+          </CardHeader>
+          <CardContent>
+            <Dialog open={isCreatingTag} onOpenChange={setIsCreatingTag}>
+              <DialogTrigger asChild>
+                <Button>Create New Tag</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create New Academic Highlight</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  {/* Required Fields */}
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Tag Name</Label>
+                    <Input
+                      id="name"
+                      value={tagFormData.name}
+                      onChange={(e) => setTagFormData(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Enter tag name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="projectId">Project ID</Label>
+                    <Input
+                      id="projectId"
+                      value={tagFormData.projectId}
+                      onChange={(e) => setTagFormData(prev => ({ ...prev, projectId: e.target.value }))}
+                      placeholder="Enter project ID"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title</Label>
+                    <Input
+                      id="title"
+                      value={tagFormData.title}
+                      onChange={(e) => setTagFormData(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Enter highlight title"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                      value={tagFormData.status}
+                      onValueChange={(value: typeof statusOptions[number]) => 
+                        setTagFormData(prev => ({ ...prev, status: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statusOptions.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Optional Fields */}
+                  <div className="space-y-2">
+                    <Label htmlFor="conference">Conference (Optional)</Label>
+                    <Input
+                      id="conference"
+                      value={tagFormData.conference}
+                      onChange={(e) => setTagFormData(prev => ({ ...prev, conference: e.target.value }))}
+                      placeholder="Enter conference name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="date">Date (Optional)</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={tagFormData.date}
+                      onChange={(e) => setTagFormData(prev => ({ ...prev, date: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="competition">Competition (Optional)</Label>
+                    <Input
+                      id="competition"
+                      value={tagFormData.competition}
+                      onChange={(e) => setTagFormData(prev => ({ ...prev, competition: e.target.value }))}
+                      placeholder="Enter competition name"
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleCreateTag}
+                    className="w-full mt-6"
+                  >
+                    Create Tag
+                  </Button>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {ownedProjects.map((project) => (
-                    <div key={project.id} className="w-full">
-                      <ProjectCard 
-                        project={project}
-                        onClick={() => window.location.href = `/project/${project.id}`}
-                      />
-                    </div>
-                  ))}
+              </DialogContent>
+            </Dialog>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <Card className="w-full mb-6 bg-card">
+            <CardHeader>
+              <h2 className="text-lg font-semibold">Activity Overview</h2>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-sm font-medium text-muted-foreground">Total Projects</span>
+                  <Badge variant="secondary" className="bg-secondary text-secondary-foreground">
+                    <Activity size={14} className="mr-1" />
+                    {ownedProjects.length}
+                  </Badge>
                 </div>
-              )}
-            </TabsContent>
-            <TabsContent value="contributed" className="mt-6">
-              <div className="text-center py-8 text-muted-foreground">
-                No contributed projects yet.
+                <Progress value={ownedProjects.length} max={10} className="h-2 bg-secondary" />
               </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Card className="bg-muted">
+                  <CardContent className="flex flex-col items-center p-4">
+                    <Code size={24} className="mb-2 text-muted-foreground" />
+                    <Badge variant="secondary" className="text-lg font-semibold bg-secondary text-secondary-foreground">
+                      {ownedProjects.length}
+                    </Badge>
+                    <p className="text-sm text-muted-foreground mt-2">Projects Posted</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted">
+                  <CardContent className="flex flex-col items-center p-4">
+                    <GitPullRequest size={24} className="mb-2 text-muted-foreground" />
+                    <Badge variant="secondary" className="text-lg font-semibold bg-secondary text-secondary-foreground">0</Badge>
+                    <p className="text-sm text-muted-foreground mt-2">Projects Contributed</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted">
+                  <CardContent className="flex flex-col items-center p-4">
+                    <GitMerge size={24} className="mb-2 text-muted-foreground" />
+                    <Badge variant="secondary" className="text-lg font-semibold bg-secondary text-secondary-foreground">0</Badge>
+                    <p className="text-sm text-muted-foreground mt-2">Pull Requests Merged</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="w-full">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <h2 className="text-lg font-semibold">Your Projects</h2>
+              <div className="flex gap-2">
+                <Link href="/edit-projects">
+                  <Button variant="outline">
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit Projects
+                  </Button>
+                </Link>
+                <Link href="/upload-project">
+                  <Button variant="default">
+                    <Code className="h-4 w-4 mr-2" />
+                    Post New Project
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="recent" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 bg-muted">
+                  <TabsTrigger value="recent" className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                    Recent Projects
+                  </TabsTrigger>
+                  <TabsTrigger value="contributed" className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                    Contributed Projects
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="recent" className="mt-6">
+                  {ownedProjects.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No projects found. Start by creating a new project!
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {ownedProjects.map((project) => (
+                        <div key={project.id} className="w-full">
+                          <ProjectCard
+                            project={project}
+                            onClick={() => window.location.href = `/project/${project.id}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+                <TabsContent value="contributed" className="mt-6">
+                  <div className="text-center py-8 text-muted-foreground">
+                    No contributed projects yet.
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client'
 import Navbar from '@/components/ui/nav-bar';
-import { useSession } from 'next-auth/react';
+
 import React from 'react';
 
 const CommonLayout = ({ children }: { children: React.ReactNode }) => {

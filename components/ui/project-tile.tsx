@@ -1,7 +1,6 @@
 import React from 'react';
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Github, GitPullRequest, Star } from "lucide-react";
 import Link from 'next/link';
 

@@ -2,12 +2,11 @@
 
 import {
   NavigationMenu,
-  NavigationMenuContent,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
 } from "@/components/ui/navigation-menu";
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -34,7 +33,7 @@ export default function Navbar() {
   const routeName = pathname === "/" ? "" : `/${pathname.slice(1)}`;
   const { user } = useUser();
   const { data: session } = useSession();
-  const [isOpen, setIsOpen] = useState(false);
+
 
   const getUserInitials = (name: string) => {
     return name
