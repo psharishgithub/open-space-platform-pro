@@ -8,8 +8,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GitPullRequest, Star } from "lucide-react";
 
+interface Project {
+  name: string;
+  language: string;
+  description: string;
+  pullRequests: number;
+  stars: number;
+}
 
-export default function ProjectCard ({ project })  {
+interface ProjectCardProps {
+  project: Project;
+}
+
+export default function ProjectCard({ project }: ProjectCardProps)  {
 
     return(
 

@@ -10,7 +10,6 @@ import SignIn from "@/components/auth/sign-in";
 import SignOut from "@/components/auth/sign-out";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "@radix-ui/react-toast";
 
 export default function SignUpPage() {
     const { data: session } = useSession();
