@@ -109,24 +109,19 @@ async function ProjectPage({ params }: { params: { id: string } }) {
 
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/projects/${params.id}`, {
       next: { revalidate: 3600 },
-
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },
     });
     
-    if (response.status === 401) {
-      return <ErrorDisplay message="Please log in to view this project" />;
-    }
-
-    if (response.status === 404) {
-      return <ErrorDisplay message="Project not found" />;
-    }
-
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Failed to fetch project data:', errorText);
+      
+      if (response.status === 404) {
+        return <ErrorDisplay message="Project not found" />;
+      }
+      
       return <ErrorDisplay message="Failed to load project data. Please try again later." />;
     }
 

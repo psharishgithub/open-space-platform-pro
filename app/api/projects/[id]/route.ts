@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import {prisma} from '@/lib/prisma';
 
 export async function GET(
   request: Request,
@@ -19,31 +19,19 @@ export async function GET(
         projectImages: true,
         tags: {
           include: {
-            curator: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
+            curator: true,
           },
         },
       },
     });
 
     if (!project) {
-      return NextResponse.json(
-        { error: 'Project not found' },
-        { status: 404 }
-      );
+      return new NextResponse('Project not found', { status: 404 });
     }
 
-    console.log('Project tags from database:', project.tags);
     return NextResponse.json(project);
   } catch (error) {
     console.error('Error fetching project:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch project' },
-      { status: 500 }
-    );
+    return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
