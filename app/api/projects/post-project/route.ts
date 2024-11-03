@@ -1,50 +1,33 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const { 
-      name, 
-      description, 
-      githubUrl, 
+    const body = await req.json();
+    const {
+      name,
+      description,
+      githubUrl,
       demoUrl,
-      techStack, 
-      imageUrl, 
-      users,
+      techStack,
+      imageUrl,
       problemStatement,
       status,
       projectType,
       keyFeatures,
-      academicHighlights,
-      projectImages
+      resources,
+      users,
+      ownerId,
     } = body;
 
-
-    if (!name || !description || !problemStatement || !projectType || !status) {
-      return NextResponse.json({ 
-        error: 'Missing required fields. Name, description, problem statement, project type, and status are required.' 
-      }, { status: 400 });
-    }
-
-
-    const existingProject = await prisma.project.findUnique({
-      where: { githubUrl },
-    });
-
-    if (existingProject) {
-      return NextResponse.json(
-        { error: 'Project with this GitHub URL already exists' }, 
-        { status: 400 }
-      );
-    }
-
-
+    // Create project with resources
     const project = await prisma.project.create({
       data: {
         name,
         description,
-        githubUrl,
+        // Only include githubUrl if it's not empty
+        ...(githubUrl ? { githubUrl } : {}),
         demoUrl,
         techStack,
         imageUrl,
@@ -52,42 +35,28 @@ export async function POST(request: Request) {
         status,
         projectType,
         keyFeatures,
-        projectImages: {
-          create: projectImages.map((image: { url: string; title: string; description: string }) => ({
-            url: image.url,
-            title: image.title,
-            description: image.description
+        resources: {
+          create: resources.map((resource: {
+            url: string
+            title: string
+            type: string
+            description: string
+          }) => ({
+            url: resource.url,
+            title: resource.title,
+            type: resource.type,
+            description: resource.description
           }))
         },
         users: {
-          create: await Promise.all(users.map(async (user: { githubUsername: string; role: string }) => {
-            const dbUser = await prisma.user.findUnique({
-              where: { githubUsername: user.githubUsername },
-            });
-
-            if (dbUser) {
-              return {
-                userId: dbUser.id,
-                role: user.role,
-              };
-            }
-            return null;
-          })).then(results => results.filter(result => result !== null)),
-        },
-        pendingUsers: {
-          create: await Promise.all(users.map(async (user: { githubUsername: string; role: string }) => {
-            const dbUser = await prisma.user.findUnique({
-              where: { githubUsername: user.githubUsername },
-            });
-
-            if (!dbUser) {
-              return {
+          create: users.map((user: { githubUsername: string; role: string }) => ({
+            role: user.role,
+            user: {
+              connect: {
                 githubUsername: user.githubUsername,
-                role: user.role,
-              };
-            }
-            return null;
-          })).then(results => results.filter(result => result !== null)),
+              },
+            },
+          })),
         },
       },
       include: {
@@ -96,17 +65,28 @@ export async function POST(request: Request) {
             user: true,
           },
         },
-        pendingUsers: true,
-        projectImages: true,
+        resources: true,
       },
     });
 
-    return NextResponse.json(project, { status: 201 });
+    return NextResponse.json(project);
   } catch (error) {
     console.error('Error creating project:', error);
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    
+    // Handle specific Prisma errors
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // P2002 is the error code for unique constraint violations
+      if (error.code === 'P2002') {
+        return NextResponse.json(
+          { error: 'A project with this GitHub URL already exists' },
+          { status: 409 }
+        );
+      }
     }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+
+    return NextResponse.json(
+      { error: 'Failed to create project' },
+      { status: 500 }
+    );
   }
 }

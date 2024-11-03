@@ -549,7 +549,11 @@ export default function DashboardPage() {
                         <div key={project.id} className="w-full">
                           <ProjectCard
                             project={project}
-                            onClick={() => window.location.href = `/project/${project.id}`}
+                            onClick={() => {
+                              if (project.id) {
+                                window.location.href = `/project/${project.id}`;
+                              }
+                            }}
                           />
                         </div>
                       ))}
