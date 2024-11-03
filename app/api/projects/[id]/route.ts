@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+// Instead of force-dynamic, use specific revalidation
+export const revalidate = process.env.VERCEL_ENV === 'preview' ? 10 : 3600;
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  // Check if it's a preview deployment
-  const isPreview = process.env.VERCEL_ENV === 'preview'
-
   try {
     const project = await prisma.project.findUnique({
       where: {
-        id: params.id,
+        id: params.id
       },
       include: {
         users: {
@@ -22,40 +22,28 @@ export async function GET(
         projectImages: true,
         tags: {
           include: {
-            curator: true,
-          },
-        },
+            curator: true
+          }
+        }
       },
     });
 
     if (!project) {
-      return new NextResponse('Project not found', { 
-        status: 404,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-        }
-      });
+      return NextResponse.json(
+        { error: 'Project not found' },
+        { status: 404 }
+      );
     }
 
-    // Add cache-control headers for preview deployments
-    const headers = {
-      'Access-Control-Allow-Origin': '*',
-      ...(isPreview && {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      })
-    }
-
-    return NextResponse.json(project, { headers });
+    return NextResponse.json(project);
   } catch (error) {
     console.error('Error fetching project:', error);
-    return new NextResponse('Internal Server Error', { 
-      status: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-      }
-    });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 

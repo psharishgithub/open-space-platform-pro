@@ -111,10 +111,9 @@ async function ProjectPage({ params }: { params: { id: string } }) {
 
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/projects/${params.id}`, {
       next: { 
-        revalidate: isPreview ? 0 : 3600,
+        revalidate: isPreview ? 10 : 3600,
         tags: [`project-${params.id}`]
       },
-      cache: isPreview ? 'no-store' : 'force-cache',
       headers: {
         'Content-Type': 'application/json',
       },
