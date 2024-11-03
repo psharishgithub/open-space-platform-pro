@@ -107,11 +107,14 @@ async function ProjectPage({ params }: { params: { id: string } }) {
       throw new Error('API base URL is not configured');
     }
 
+    const isPreview = process.env.VERCEL_ENV === 'preview'
+
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/projects/${params.id}`, {
       next: { 
-        revalidate: 3600,
+        revalidate: isPreview ? 0 : 3600,
         tags: [`project-${params.id}`]
       },
+      cache: isPreview ? 'no-store' : 'force-cache',
       headers: {
         'Content-Type': 'application/json',
       },
