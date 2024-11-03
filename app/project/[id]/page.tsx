@@ -133,16 +133,8 @@ async function ProjectPage({ params }: { params: { id: string } }) {
     const rawProject = await response.json();
 
     // Validate required fields
-    if (!rawProject || typeof rawProject !== 'object') {
-      throw new Error('Invalid project data received');
-    }
 
-    console.log('Raw project data:', rawProject); 
-    console.log('Raw project tags:', rawProject.tags);
-
-    if (!rawProject.tags) {
-      console.error('Tags property is missing from rawProject');
-    }
+   
 
     const project: ProjectData = {
       ...rawProject,
@@ -158,8 +150,6 @@ async function ProjectPage({ params }: { params: { id: string } }) {
       keyFeatures: Array.isArray(rawProject.keyFeatures) ? rawProject.keyFeatures : [],
     };
 
-    console.log('Raw tags from API:', rawProject.tags);
-    console.log('Processed tags:', project.tags);
 
     const getProjectTypeBadge = (type: string) => {
       switch (type.toUpperCase()) {
