@@ -1,32 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
-  const session = await auth();
+export function middleware(request: NextRequest) {
 
-  const isApiRoute = request.nextUrl.pathname.startsWith('/api/');
+  const response = NextResponse.next()
 
-  if (!session) {
-    if (isApiRoute) {
 
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    } else {
+  response.headers.set('Access-Control-Allow-Origin', '*')
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
-      const url = request.nextUrl.clone();
-      url.pathname = '/google-signin';
-      return NextResponse.redirect(url);
-    }
-  }
-
-  return NextResponse.next();
+  return response
 }
 
 export const config = {
-  matcher: [
-    '/dashboard/:path*',
-    '/profile/:path*',
-    '/upload-project',
-    // '/api/projects/:path*',
-    '/api/users/:path*'
-  ],
-};
+  matcher: '/api/:path*',
+}
