@@ -1,115 +1,97 @@
-import React from 'react';
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Github, GitPullRequest, Star } from "lucide-react";
 import Link from 'next/link';
+import { Card, CardContent } from './card';
+import { Badge } from './badge';
+import { Avatar, AvatarFallback, AvatarImage } from './avatar';
+
+interface ProjectUser {
+  user: {
+    name: string;
+    githubAvatarUrl: string | null;
+    githubUsername: string;
+  };
+  role: string;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  description: string | null;
+  githubUrl: string;
+  techStack: string[];
+  imageUrl: string | null;
+  users: ProjectUser[];
+  language?: string;
+  pullRequests?: number;
+  stars?: number;
+}
 
 interface ProjectCardProps {
-  project: {
-    id: string;
-    name: string;
-    description: string | null;
-    githubUrl: string;
-    techStack: string[];
-    imageUrl: string | null;
-    users: Array<{
-      user: {
-        name: string;
-        githubAvatarUrl: string | null;
-        githubUsername: string; 
-      };
-      role: string;
-    }>;
-    language: string;
-    pullRequests: number;
-    stars: number;
-  };
+  project: Project;
   onClick?: () => void;
 }
 
-const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
-  const shortenDescription = (desc: string | null, maxLength: number = 100) => {
-    if (!desc) return '';
-    return desc.length > maxLength ? `${desc.substring(0, maxLength)}...` : desc;
-  };
+export default function ProjectCard({ project, onClick }: ProjectCardProps) {
+  // Ensure we have a valid project ID for the link
+  const projectLink = project?.id ? `/project/${project.id}` : '/projects';
 
   return (
-    <Card 
-      className="relative group flex flex-col h-full w-full max-w-sm overflow-hidden cursor-pointer" 
-      onClick={onClick}
-    >
-      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
-      <div className="relative flex flex-col h-full bg-black/40 backdrop-blur-sm border border-white/5">
-        <CardHeader className="space-y-3">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <h3 className="text-lg font-medium text-white group-hover:text-primary transition-colors">
-                {project.name}
-              </h3>
-              <div className="flex items-center space-x-2 text-xs text-white/60">
-                <span>{project.language}</span>
-                <span>•</span>
-                <div className="flex items-center space-x-1">
-                  <Star size={12} className="text-yellow-500" />
-                  <span>{project.stars}</span>
-                </div>
-                <span>•</span>
-                <div className="flex items-center space-x-1">
-                  <GitPullRequest size={12} />
-                  <span>{project.pullRequests}</span>
-                </div>
+    <Link href={projectLink}>
+      <Card 
+        className="hover:shadow-lg transition-shadow duration-200 cursor-pointer h-full"
+        onClick={onClick}
+      >
+        <CardContent className="p-6">
+          {/* Project Image */}
+          {project.imageUrl && (
+            <div className="mb-4 w-full h-48 relative overflow-hidden rounded-lg">
+              <img
+                src={project.imageUrl}
+                alt={project.name}
+                className="object-cover w-full h-full"
+              />
+            </div>
+          )}
+
+          {/* Project Title and Tech Stack */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-semibold mb-2">{project.name}</h3>
+              <p className="text-muted-foreground text-sm line-clamp-2">
+                {project.description || 'No description available'}
+              </p>
+            </div>
+
+            {/* Tech Stack Badges */}
+            <div className="flex flex-wrap gap-2">
+              {project.techStack?.map((tech, index) => (
+                <Badge key={index} variant="secondary">
+                  {tech}
+                </Badge>
+              ))}
+            </div>
+
+            {/* Project Stats */}
+            <div className="flex items-center justify-between pt-4">
+              <div className="flex items-center space-x-2">
+                {project.users?.[0]?.user?.githubAvatarUrl && (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage
+                      src={project.users[0].user.githubAvatarUrl}
+                      alt={project.users[0].user.name}
+                    />
+                    <AvatarFallback>
+                      {project.users[0].user.name?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+                <span className="text-sm text-muted-foreground">
+                  {project.users?.[0]?.user?.name || 'Anonymous'}
+                </span>
               </div>
             </div>
-            <Link 
-              href={project.githubUrl} 
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
-            >
-              <Github className="h-4 w-4" />
-            </Link>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="flex-grow space-y-4">
-          <p className="text-sm text-white/60 leading-relaxed">
-            {shortenDescription(project.description)}
-          </p>
-          
-          <div className="flex flex-wrap gap-1.5">
-            {project.techStack.map((tech, index) => (
-              <Badge 
-                key={index} 
-                variant="secondary" 
-                className="bg-white/5 hover:bg-white/10 text-white/80 border-0"
-              >
-                {tech}
-              </Badge>
-            ))}
           </div>
         </CardContent>
-
-        <CardFooter className="pt-4 border-t border-white/5">
-          <div className="flex flex-wrap gap-2">
-            {project.users.slice(0, 3).map((projectUser, index) => (
-              <div 
-                key={index} 
-                className="px-2 py-1 text-xs bg-white/5 text-white/70 rounded-sm"
-              >
-                @{projectUser.user.githubUsername}
-              </div>
-            ))}
-            {project.users.length > 3 && (
-              <div className="px-2 py-1 text-xs bg-white/5 text-white/70 rounded-sm">
-                +{project.users.length - 3}
-              </div>
-            )}
-          </div>
-        </CardFooter>
-      </div>
-    </Card>
+      </Card>
+    </Link>
   );
-};
-
-export default ProjectCard;
+}

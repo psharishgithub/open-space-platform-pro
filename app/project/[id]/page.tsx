@@ -14,152 +14,66 @@ import {
   Award,
   FileText,
   Star,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Presentation,
+  ScrollText,
+  Link as LinkIcon
 } from 'lucide-react';
 import Image from 'next/image'
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-interface ProjectData {
+interface Resource {
   id: string;
-  name: string;
+  title: string;
   description: string;
-  problemStatement: string;
-  githubUrl: string;
-  demoUrl: string | null;
-  techStack: string[];
-  imageUrl: string | null;
-  status: string;
-  projectType: string;
-  keyFeatures: string[];
-  createdAt: string;
-  updatedAt: string;
-  users: {
-    id: string;
-    role: string;
-    user: {
-      id: string;
-      name: string;
-      email: string;
-      githubUsername: string;
-      githubProfileUrl: string;
-      githubAvatarUrl: string;
-      bio: string | null;
-    };
-  }[];
-  projectImages: {
-    id: string;
-    title: string;
-    description: string;
-    url: string;
-    createdAt: string;
-    updatedAt: string;
-  }[];
-  tags: {
-    id: string;
-    name: string;
-    title: string | null;
-    status: string | null;
-    conference: string | null;
-    date: string | null;
-    competition: string | null;
-    curator: {
-      id: string;
-      name: string;
-    };
-    createdAt: string;
-  }[];
+  url: string;
+  type: string;
 }
 
+async function getProjectData(id: string) {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  if (!baseUrl) throw new Error('API base URL is not configured');
 
-interface RawProjectTag {
-  id: string;
-  name: string;
-  title: string | null;
-  status: string | null;
-  conference: string | null;
-  date: string | null;
-  competition: string | null;
-  curator: {
-    id: string;
-    name: string;
-  } | null;
-  createdAt: string;
+  const response = await fetch(`${baseUrl}/api/projects/${id}`, {
+    cache: 'no-store',
+    next: { revalidate: 0 }
+  });
+
+  if (!response.ok) {
+    throw new Error(response.status === 404 ? 'Project not found' : 'Failed to load project data');
+  }
+
+  return response.json();
 }
 
-function ErrorDisplay({ message }: { message: string }) {
-  return (
-    <Card className="border-none shadow-lg">
-      <CardHeader className="space-y-4">
-        <div className="flex flex-col items-center justify-center p-6">
-          <CardTitle className="text-xl text-red-500 mb-2">Error</CardTitle>
-          <CardDescription className="text-center">
-            {message}
-          </CardDescription>
-        </div>
-      </CardHeader>
-    </Card>
-  );
+function getProjectTypeBadge(type: string): "default" | "secondary" | "outline" {
+  switch (type.toUpperCase()) {
+    case 'PERSONAL PROJECT':
+      return 'default';
+    case 'TEAM PROJECT':
+      return 'secondary';
+    case 'ACADEMIC PROJECT':
+      return 'secondary';
+    case 'OPEN SOURCE':
+      return 'default';
+    default:
+      return 'outline';
+  }
 }
 
 async function ProjectPage({ params }: { params: { id: string } }) {
   try {
+    const project = await getProjectData(params.id);
 
-    if (!process.env.NEXT_PUBLIC_BASE_URL) {
-      throw new Error('API base URL is not configured');
-    }
-
-    const isPreview = process.env.VERCEL_ENV === 'preview'
-
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/projects/${params.id}`, {
-      next: { 
-        revalidate: isPreview ? 10 : 3600,
-        tags: [`project-${params.id}`]
-      },
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Failed to fetch project data:', errorText);
-      
-      if (response.status === 404) {
-        return <ErrorDisplay message="Project not found" />;
-      }
-      
-      return <ErrorDisplay message="Failed to load project data. Please try again later." />;
-    }
-
-    const rawProject = await response.json();
-
-    // Validate required fields
-
-   
-
-    const project: ProjectData = {
-      ...rawProject,
-      tags: Array.isArray(rawProject.tags) 
-        ? rawProject.tags.map((tag: RawProjectTag) => ({
-            ...tag,
-            curator: tag.curator || { id: '', name: '' }
-          })) 
-        : [],
-      users: Array.isArray(rawProject.users) ? rawProject.users : [],
-      projectImages: Array.isArray(rawProject.projectImages) ? rawProject.projectImages : [],
-      techStack: Array.isArray(rawProject.techStack) ? rawProject.techStack : [],
-      keyFeatures: Array.isArray(rawProject.keyFeatures) ? rawProject.keyFeatures : [],
-    };
-
-
-    const getProjectTypeBadge = (type: string) => {
-      switch (type.toUpperCase()) {
-        case 'BLOCKCHAIN':
-          return 'default';
-        case 'AI':
-          return 'secondary';
-        default:
-          return 'outline';
-      }
+    const projectData = {
+      ...project,
+      projectImages: project.projectImages || [],
+      techStack: project.techStack || [],
+      users: project.users || [],
+      tags: project.tags || [],
+      resources: project.resources || [],
+      keyFeatures: project.keyFeatures || [],
     };
 
     return (
@@ -170,43 +84,43 @@ async function ProjectPage({ params }: { params: { id: string } }) {
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <CardTitle className="text-3xl font-bold">{project.name}</CardTitle>
-                  <Badge variant="secondary">{project.status}</Badge>
-                  <Badge variant={getProjectTypeBadge(project.projectType)}>
-                    {project.projectType}
-                  </Badge>
+                  <CardTitle className="text-3xl font-bold">{projectData.name}</CardTitle>
+                  {projectData.status && <Badge variant="secondary">{projectData.status}</Badge>}
+                  {projectData.projectType && (
+                    <Badge variant={getProjectTypeBadge(projectData.projectType)}>
+                      {projectData.projectType}
+                    </Badge>
+                  )}
                 </div>
                 <CardDescription className="mt-2 text-lg">
-                  {project.description}
+                  {projectData.description || 'No description available'}
                 </CardDescription>
               </div>
             </div>
             
             <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap gap-2">
-                {project.techStack.length > 0 ? (
-                  project.techStack.map((tech) => (
+              {projectData.techStack.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {projectData.techStack.map((tech: string) => (
                     <Badge key={tech} variant="outline">
                       {tech}
                     </Badge>
-                  ))
-                ) : (
-                  <span className="text-muted-foreground">No technologies listed</span>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
 
               <div className="flex gap-4">
-                {project.demoUrl && (
+                {projectData.demoUrl && (
                   <Button variant="default" className="gap-2" asChild>
-                    <a href={project.demoUrl} target="_blank" rel="noopener noreferrer">
+                    <a href={projectData.demoUrl} target="_blank" rel="noopener noreferrer">
                       <Globe className="h-4 w-4" />
                       View Demo
                     </a>
                   </Button>
                 )}
-                {project.githubUrl && (
+                {projectData.githubUrl && (
                   <Button variant="outline" className="gap-2" asChild>
-                    <a href={project.githubUrl} target="_blank" rel="noopener noreferrer">
+                    <a href={projectData.githubUrl} target="_blank" rel="noopener noreferrer">
                       <Github className="h-4 w-4" />
                       Source Code
                     </a>
@@ -233,27 +147,29 @@ async function ProjectPage({ params }: { params: { id: string } }) {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  {project.problemStatement}
+                  {projectData.problemStatement || 'No problem statement available'}
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Key Features</CardTitle>
-                <CardDescription>Main capabilities and functionalities</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4">
-                  {project.keyFeatures.map((feature, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <Badge variant="outline">{index + 1}</Badge>
-                      <span>{feature}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            {projectData.keyFeatures.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Key Features</CardTitle>
+                  <CardDescription>Main capabilities and functionalities</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4">
+                    {projectData.keyFeatures.map((feature: string, index: number) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <Badge variant="outline">{index + 1}</Badge>
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>
@@ -261,25 +177,33 @@ async function ProjectPage({ params }: { params: { id: string } }) {
                 <CardDescription>Visual overview of key interfaces and features</CardDescription>
               </CardHeader>
               <CardContent>
-                {project.projectImages.length > 0 ? (
+                {projectData.resources?.filter((resource: Resource) => resource.type === 'image').length > 0 ? (
                   <div className="grid gap-6">
-                    {project.projectImages.map((image, index) => (
-                      <div key={index} className="space-y-3">
-                        <div className="relative aspect-video overflow-hidden rounded-lg border bg-muted">
-                          <Image
-                            src={image.url}
-                            alt={image.title}
-                            fill
-                            className="object-cover"
-                          />
+                    {projectData.resources
+                      .filter((resource: Resource) => resource.type === 'image')
+                      .map((image: {
+                        id: string,
+                        title: string,
+                        description: string,
+                        url: string,
+                        type: string
+                      }, index: number) => (
+                        <div key={image.id} className="space-y-3">
+                          <div className="relative aspect-video overflow-hidden rounded-lg border bg-muted">
+                            <Image
+                              src={image.url}
+                              alt={image.title}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <div>
+                            <h4 className="font-medium">{image.title}</h4>
+                            <p className="text-sm text-muted-foreground">{image.description}</p>
+                          </div>
+                          {index < projectData.resources.filter((r: Resource) => r.type === 'image').length - 1 && <Separator />}
                         </div>
-                        <div>
-                          <h4 className="font-medium">{image.title}</h4>
-                          <p className="text-sm text-muted-foreground">{image.description}</p>
-                        </div>
-                        {index < project.projectImages.length - 1 && <Separator />}
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 ) : (
                   <div className="text-center py-4 text-muted-foreground">
@@ -297,9 +221,9 @@ async function ProjectPage({ params }: { params: { id: string } }) {
                 <CardDescription>Meet the people behind the project</CardDescription>
               </CardHeader>
               <CardContent>
-                {project.users.length > 0 ? (
+                {projectData.users.length > 0 ? (
                   <div className="grid gap-6">
-                    {project.users.map((member) => (
+                    {projectData.users.map((member: { id: string, role: string, user: { id: string, name: string, email: string, githubUsername: string, githubProfileUrl: string, githubAvatarUrl: string, bio: string | null } }) => (
                       <div key={member.user.id} className="flex items-center gap-4">
                         <Avatar className="h-12 w-12">
                           <AvatarImage src={member.user.githubAvatarUrl} alt={member.user.name} />
@@ -349,23 +273,28 @@ async function ProjectPage({ params }: { params: { id: string } }) {
                 <CardDescription>Academic achievements and recognition</CardDescription>
               </CardHeader>
               <CardContent>
-                
-
-                {project.tags && project.tags.length > 0 ? (
+                {projectData.tags && projectData.tags.length > 0 ? (
                   <div className="space-y-6">
-                    {project.tags.map((tag, index) => (
-                      <div key={tag.id} className="space-y-2">
+                    {projectData.tags.map((tag: { id: string, name: string, title: string | null, status: string | null, conference: string | null, date: string | null, competition: string | null, curator: { id: string, name: string } | null, createdAt: string }) => (
+                      <div key={tag.id} className="space-y-2 border rounded-lg p-4">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-medium">
-                            {tag.title || tag.name || 'Untitled Tag'}
-                          </h4>
+                          <div className="space-y-1">
+                            <h4 className="font-medium text-lg">
+                              {tag.name}
+                            </h4>
+                            {tag.title && (
+                              <p className="text-sm text-muted-foreground">
+                                {tag.title}
+                              </p>
+                            )}
+                          </div>
                           {tag.status && (
                             <Badge variant="secondary">
                               {tag.status}
                             </Badge>
                           )}
                         </div>
-                        <div className="text-sm text-muted-foreground space-y-1">
+                        <div className="text-sm text-muted-foreground space-y-2">
                           {tag.conference && (
                             <div className="flex items-center gap-2">
                               <Award className="h-4 w-4" />
@@ -391,15 +320,12 @@ async function ProjectPage({ params }: { params: { id: string } }) {
                             </div>
                           )}
                         </div>
-                        {index < project.tags.length - 1 && (
-                          <Separator className="my-4" />
-                        )}
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-4 text-muted-foreground">
-                    No project tags available.
+                    No academic tags available for this project.
                   </div>
                 )}
               </CardContent>
@@ -413,44 +339,63 @@ async function ProjectPage({ params }: { params: { id: string } }) {
                 <CardDescription>Access project materials and documentation</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4">
-                  {project.imageUrl && (
-                    <div className="flex items-center gap-3">
-                      <ImageIcon className="h-4 w-4" />
-                      <a 
-                        href={project.imageUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline flex items-center gap-2"
-                      >
-                        Main Project Image
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </div>
-                  )}
-                  {(!project.imageUrl) && (
-                    <div className="text-center py-4 text-muted-foreground">
-                      No resources available.
-                    </div>
-                  )}
-                </div>
+                {projectData.resources?.filter((resource: Resource) => resource.type !== 'image').length > 0 ? (
+                  <div className="grid gap-6">
+                    {projectData.resources
+                      .filter((resource: Resource) => resource.type !== 'image')
+                      .map((resource: Resource) => (
+                        <div key={resource.id} className="space-y-3">
+                          <div className="relative group">
+                            <div className="p-4 rounded-lg border bg-muted">
+                              <div className="flex items-center space-x-2">
+                                {resource.type === 'document' && <FileText className="h-4 w-4" />}
+                                {resource.type === 'presentation' && <Presentation className="h-4 w-4" />}
+                                {resource.type === 'paper' && <ScrollText className="h-4 w-4" />}
+                                {resource.type === 'other' && <LinkIcon className="h-4 w-4" />}
+                                <a 
+                                  href={resource.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-primary hover:underline flex items-center gap-2"
+                                >
+                                  {resource.title}
+                                  <ExternalLink className="h-4 w-4" />
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">{resource.description}</p>
+                          </div>
+                          <Separator className="my-4" />
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No additional resources available for this project.
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
     );
-
   } catch (error) {
-    console.error('Error in ProjectPage:', error);
     return (
-      <ErrorDisplay 
-        message={
-          error instanceof Error 
-            ? error.message 
-            : "An unexpected error occurred while loading the project"
-        }
-      />
+      <div className="container mx-auto max-w-4xl p-6">
+        <Card className="border-none shadow-lg">
+          <CardHeader className="space-y-4">
+            <div className="flex flex-col items-center justify-center p-6">
+              <CardTitle className="text-xl text-red-500 mb-2">Error</CardTitle>
+              <CardDescription className="text-center">
+                {error instanceof Error ? error.message : 'An unexpected error occurred'}
+              </CardDescription>
+            </div>
+          </CardHeader>
+        </Card>
+      </div>
     );
   }
 }

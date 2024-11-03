@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// Instead of force-dynamic, use specific revalidation
-export const revalidate = process.env.VERCEL_ENV === 'preview' ? 10 : 3600;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(
   request: Request,
@@ -19,7 +19,7 @@ export async function GET(
             user: true,
           },
         },
-        projectImages: true,
+        resources: true,
         tags: {
           include: {
             curator: true
@@ -27,6 +27,8 @@ export async function GET(
         }
       },
     });
+
+    console.log('API Response - Project Tags:', project?.tags); // Debug log
 
     if (!project) {
       return NextResponse.json(

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Loader2, X, Plus, Github, FileCode, Users, Rocket, LibraryBig, ImagePlus, Trash2, Upload, Send } from 'lucide-react'
+import { Loader2, X, Plus, Github, FileCode, Users, Rocket, LibraryBig, ImagePlus, Trash2, Upload, Send, FileText, Presentation, ScrollText, Link } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useUser } from '@/components/user-context'
@@ -32,14 +32,21 @@ interface Repository {
 }
 
 interface ProjectImage {
-  url: string
-  title: string
-  description: string
+  url: string;
+  title: string;
+  description: string;
 }
 
 interface Technology {
   value: string;
   label: string;
+}
+
+interface ProjectResource {
+  url: string;
+  title: string;
+  type: 'image' | 'document' | 'presentation' | 'paper' | 'other';
+  description: string;
 }
 
 const COMMON_TECHNOLOGIES: Technology[] = [
@@ -70,6 +77,7 @@ export default function UploadProjectsPage() {
     projectType: '',
     keyFeatures: [''],
     academicHighlights: [] as { title: string; status: string; conference?: string; date?: string; competition?: string }[],
+    resources: [] as ProjectResource[],
     projectImages: [] as ProjectImage[],
   })
   const [projectUsers, setProjectUsers] = useState<ProjectUser[]>([])
@@ -81,11 +89,17 @@ export default function UploadProjectsPage() {
   const [repositories, setRepositories] = useState<Repository[]>([])
   const [isLoadingRepos, setIsLoadingRepos] = useState(false)
   const [enableGithub, setEnableGithub] = useState(false)
+  const [newResource, setNewResource] = useState<ProjectResource>({
+    url: '',
+    title: '',
+    type: 'image',
+    description: ''
+  })
   const [newImage, setNewImage] = useState<ProjectImage>({
     url: '',
     title: '',
     description: ''
-  })
+  });
   const { toast } = useToast()
 
   const resetForm = () => {
@@ -101,6 +115,7 @@ export default function UploadProjectsPage() {
       projectType: '',
       keyFeatures: [''],
       academicHighlights: [],
+      resources: [],
       projectImages: [],
     });
     setProjectUsers(user && user.githubUsername ? [{ id: user.id, githubUsername: user.githubUsername, role: 'OWNER' }] : []);
@@ -144,7 +159,6 @@ export default function UploadProjectsPage() {
     const formErrors: Partial<{
       name: string;
       description: string;
-      githubUrl: string;
       demoUrl: string;
       techStack: string;
       imageUrl: string;
@@ -159,7 +173,6 @@ export default function UploadProjectsPage() {
         date?: string;
         competition?: string;
       }[];
-      projectImages: ProjectImage[];
       projectUsers: string;
     }> = {};
 
@@ -173,9 +186,6 @@ export default function UploadProjectsPage() {
     }
     if (projectUsers.length === 0) formErrors.projectUsers = 'At least one user is required'
     
-    if (enableGithub && !project.githubUrl.trim()) {
-      formErrors.githubUrl = 'GitHub URL is required when private repository is enabled'
-    }
     if (project.demoUrl && !/^https?:\/\/.*/.test(project.demoUrl)) {
       formErrors.demoUrl = 'Invalid demo URL format'
     }
@@ -304,7 +314,6 @@ export default function UploadProjectsPage() {
       project.status &&
       project.keyFeatures.some(f => f.trim()) &&
       projectUsers.length > 0 &&
-      (!enableGithub || project.githubUrl.trim()) &&
       (!project.demoUrl || /^https?:\/\/.*/.test(project.demoUrl))
     )
   }
@@ -393,9 +402,9 @@ export default function UploadProjectsPage() {
             <Users className="h-4 w-4" />
             <span>Team</span>
           </TabsTrigger>
-          <TabsTrigger value="images" className="space-x-2">
-            <ImagePlus className="h-4 w-4" />
-            <span>Images</span>
+          <TabsTrigger value="resources" className="space-x-2">
+            <LibraryBig className="h-4 w-4" />
+            <span>Resources</span>
           </TabsTrigger>
         </TabsList>
 
@@ -693,12 +702,12 @@ export default function UploadProjectsPage() {
             
           </TabsContent>
 
-          <TabsContent value="images" className="space-y-6">
+          <TabsContent value="resources" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Project Images</CardTitle>
+                <CardTitle>Project Resources</CardTitle>
                 <CardDescription>
-                  Visual overview of key interfaces and features (Optional)
+                  Add visual content and supporting documents for your project
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -707,27 +716,46 @@ export default function UploadProjectsPage() {
                     <Button className="w-full h-32 border-dashed" variant="outline">
                       <div className="flex flex-col items-center space-y-2">
                         <Upload className="h-8 w-8" />
-                        <span>Add New Image</span>
+                        <span>Add New Resource</span>
                       </div>
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Add Project Image</DialogTitle>
-                      <DialogDescription>Add image URL and description</DialogDescription>
+                      <DialogTitle>Add Project Resource</DialogTitle>
+                      <DialogDescription>Add resource details</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label>Image URL</Label>
+                        <Label>Resource Type</Label>
+                        <Select
+                          onValueChange={(value) => setNewResource(prev => ({ ...prev, type: value as ProjectResource['type'] }))}
+                          value={newResource.type}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select resource type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="image">Image</SelectItem>
+                            <SelectItem value="document">Document</SelectItem>
+                            <SelectItem value="presentation">Presentation</SelectItem>
+                            <SelectItem value="paper">Research Paper</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Resource URL</Label>
                         <Input
-                          value={newImage.url}
-                          onChange={(e) => setNewImage(prev => ({ ...prev, url: e.target.value }))}
-                          placeholder="https://i.postimg.cc/example/image.jpg"
+                          value={newResource.url}
+                          onChange={(e) => setNewResource(prev => ({ ...prev, url: e.target.value }))}
+                          placeholder="https://..."
                         />
-                        {newImage.url && (
+                        {newResource.type === 'image' && newResource.url && (
                           <div className="relative aspect-video overflow-hidden rounded-lg border bg-muted">
                             <Image
-                              src={newImage.url}
+                              src={newResource.url}
                               alt="Preview"
                               fill
                               className="object-cover"
@@ -743,27 +771,52 @@ export default function UploadProjectsPage() {
                       <div className="space-y-2">
                         <Label>Title</Label>
                         <Input
-                          value={newImage.title}
-                          onChange={(e) => setNewImage(prev => ({ ...prev, title: e.target.value }))}
-                          placeholder="Image title"
+                          value={newResource.title}
+                          onChange={(e) => setNewResource(prev => ({ ...prev, title: e.target.value }))}
+                          placeholder="Resource title"
                         />
                       </div>
 
                       <div className="space-y-2">
                         <Label>Description</Label>
                         <Textarea
-                          value={newImage.description}
-                          onChange={(e) => setNewImage(prev => ({ ...prev, description: e.target.value }))}
-                          placeholder="Describe what this image shows"
+                          value={newResource.description}
+                          onChange={(e) => setNewResource(prev => ({ ...prev, description: e.target.value }))}
+                          placeholder="Describe this resource"
                         />
                       </div>
 
                       <Button
-                        onClick={addImage}
-                        disabled={!newImage.url || !newImage.title}
+                        onClick={() => {
+                          if (!newResource.url || !newResource.title) {
+                            toast({
+                              title: "Missing information",
+                              description: "Please provide a URL and title",
+                              variant: "destructive"
+                            })
+                            return
+                          }
+
+                          try {
+                            new URL(newResource.url);
+                          } catch {
+                            toast({
+                              title: "Invalid URL",
+                              description: "Please provide a valid URL",
+                              variant: "destructive"
+                            })
+                            return
+                          }
+
+                          setProject(prev => ({
+                            ...prev,
+                            resources: [...prev.resources, newResource]
+                          }))
+                          setNewResource({ url: '', title: '', type: 'image', description: '' })
+                        }}
                         className="w-full"
                       >
-                        Add Image
+                        Add Resource
                       </Button>
                     </div>
                   </DialogContent>
@@ -771,31 +824,51 @@ export default function UploadProjectsPage() {
 
                 <ScrollArea className="h-[500px]">
                   <div className="grid gap-6">
-                    {project.projectImages.map((image, index) => (
+                    {project.resources.map((resource, index) => (
                       <div key={index} className="space-y-3">
                         <div className="relative group">
-                          <div className="relative aspect-video overflow-hidden rounded-lg border bg-muted">
-                            <Image
-                              src={image.url}
-                              alt={image.title}
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
+                          {resource.type === 'image' ? (
+                            <div className="relative aspect-video overflow-hidden rounded-lg border bg-muted">
+                              <Image
+                                src={resource.url}
+                                alt={resource.title}
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="p-4 rounded-lg border bg-muted">
+                              <div className="flex items-center space-x-2">
+                                {resource.type === 'document' && <FileText className="h-4 w-4" />}
+                                {resource.type === 'presentation' && <Presentation className="h-4 w-4" />}
+                                {resource.type === 'paper' && <ScrollText className="h-4 w-4" />}
+                                {resource.type === 'other' && <Link className="h-4 w-4" />}
+                                <a href={resource.url} target="_blank" rel="noopener noreferrer" 
+                                   className="text-primary hover:underline">
+                                  {resource.title}
+                                </a>
+                              </div>
+                            </div>
+                          )}
                           <Button
                             variant="destructive"
                             size="icon"
                             className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => removeImage(index)}
+                            onClick={() => {
+                              setProject(prev => ({
+                                ...prev,
+                                resources: prev.resources.filter((_, i) => i !== index)
+                              }))
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                         <div>
-                          <h4 className="font-medium">{image.title}</h4>
-                          <p className="text-sm text-muted-foreground">{image.description}</p>
+                          <h4 className="font-medium">{resource.title}</h4>
+                          <p className="text-sm text-muted-foreground">{resource.description}</p>
                         </div>
-                        {index < project.projectImages.length - 1 && <Separator />}
+                        {index < project.resources.length - 1 && <Separator />}
                       </div>
                     ))}
                   </div>
