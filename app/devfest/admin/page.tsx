@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
@@ -41,13 +41,7 @@ export default function DevFestAdminPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  useEffect(() => {
-    checkAdminAccess();
-    fetchProjects();
-    fetchVotingStatus();
-  }, [session]);
-
-  const checkAdminAccess = async () => {
+  const checkAdminAccess = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/check-admin');
       if (!response.ok) {
@@ -58,7 +52,7 @@ export default function DevFestAdminPage() {
       console.error('Error checking admin access:', error);
       router.push('/devfest');
     }
-  };
+  }, [router]);
 
   const fetchProjects = async () => {
     try {
@@ -85,6 +79,12 @@ export default function DevFestAdminPage() {
       console.error('Error fetching voting status:', error);
     }
   };
+
+  useEffect(() => {
+    checkAdminAccess();
+    fetchProjects();
+    fetchVotingStatus();
+  }, [session, checkAdminAccess]);
 
   const toggleVoting = async () => {
     try {

@@ -14,12 +14,6 @@ export default function DevFestSignInPage() {
     const userEmail = session?.user?.email || "";
     const googleId = session?.googleId || "";
 
-    useEffect(() => {
-        if (session?.user) {
-            handleUserCreation();
-        }
-    }, [session]);
-
     const handleUserCreation = async () => {
         if (!session) return;
         
@@ -47,6 +41,12 @@ export default function DevFestSignInPage() {
             toast.error("Failed to sign in. Please try again.");
         }
     };
+
+    useEffect(() => {
+        if (session?.user) {
+            handleUserCreation();
+        }
+    }, [session, handleUserCreation, router, userEmail, googleId]);
 
     return (
         <main className="w-screen h-screen flex items-center justify-center">

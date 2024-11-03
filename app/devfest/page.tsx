@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LogOut } from 'lucide-react';
+import Image from 'next/image';
 
 interface Vote {
   id: string;
@@ -157,10 +158,12 @@ export default function DevFestPage() {
               <CardHeader className="space-y-2">
                 {project.imageUrl && (
                   <div className="w-full h-48 relative overflow-hidden rounded-lg mb-2">
-                    <img
+                    <Image
                       src={project.imageUrl}
                       alt={project.name}
-                      className="object-cover w-full h-full"
+                      className="object-cover"
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                   </div>
                 )}
