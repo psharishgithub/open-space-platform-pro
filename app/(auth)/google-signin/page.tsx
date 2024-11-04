@@ -17,9 +17,10 @@ export default function SignUpPage() {
     const [name, setName] = useState(""); 
     const userEmail = session?.user?.email || "";
     const googleId = session?.googleId || "";
-    const { toast } = useToast()
+    const { toast } = useToast();
     const [isAllowed, setIsAllowed] = useState(false);
     const [hasCheckedAccess, setHasCheckedAccess] = useState(false);
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
 
     const checkAllowedEmail = useCallback(async () => {
         if (!session?.user?.email || hasCheckedAccess) return;
@@ -106,7 +107,7 @@ export default function SignUpPage() {
                     variant: "default",
                     duration: 5000,
                 });
-                router.push("/github-link");
+                await router.push("/github-link");
             } else if (response.status === 409) {
                 toast({
                     title: "Welcome Back!",
@@ -114,7 +115,8 @@ export default function SignUpPage() {
                     variant: "default",
                     duration: 5000,
                 });
-                router.push("/dashboard");
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                window.location.href = `${baseUrl}/dashboard`;
             } else if (!response.ok) {
                 throw new Error('Network response was not ok');
             } else {
@@ -126,7 +128,7 @@ export default function SignUpPage() {
                     variant: "default",
                     duration: 5000,
                 });
-                router.push("/github-link");
+                await router.push("/github-link");
             }
         } catch (error) {
             console.error("Error:", error);
