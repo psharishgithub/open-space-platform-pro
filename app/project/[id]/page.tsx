@@ -17,7 +17,8 @@ import {
   Image as ImageIcon,
   Presentation,
   ScrollText,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Clock
 } from 'lucide-react';
 import Image from 'next/image'
 export const dynamic = 'force-dynamic';
@@ -36,8 +37,7 @@ async function getProjectData(id: string) {
   if (!baseUrl) throw new Error('API base URL is not configured');
 
   const response = await fetch(`${baseUrl}/api/projects/${id}`, {
-    cache: 'no-store',
-    next: { revalidate: 0 }
+    cache: 'no-store'
   });
 
   if (!response.ok) {
@@ -66,11 +66,17 @@ async function ProjectPage({ params }: { params: { id: string } }) {
   try {
     const project = await getProjectData(params.id);
 
+    console.log('Project Data:', {
+      users: project.users,
+      pendingUsers: project.pendingUsers
+    });
+
     const projectData = {
       ...project,
       projectImages: project.projectImages || [],
       techStack: project.techStack || [],
       users: project.users || [],
+      pendingUsers: project.pendingUsers || [],
       tags: project.tags || [],
       resources: project.resources || [],
       keyFeatures: project.keyFeatures || [],
@@ -221,47 +227,90 @@ async function ProjectPage({ params }: { params: { id: string } }) {
                 <CardDescription>Meet the people behind the project</CardDescription>
               </CardHeader>
               <CardContent>
-                {projectData.users.length > 0 ? (
-                  <div className="grid gap-6">
-                    {projectData.users.map((member: { id: string, role: string, user: { id: string, name: string, email: string, githubUsername: string, githubProfileUrl: string, githubAvatarUrl: string, bio: string | null } }) => (
-                      <div key={member.user.id} className="flex items-center gap-4">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={member.user.githubAvatarUrl} alt={member.user.name} />
-                          <AvatarFallback>{member.user.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="font-medium">{member.user.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {member.role.charAt(0) + member.role.slice(1).toLowerCase()}
-                          </div>
-                          {member.user.bio && (
-                            <div className="text-sm text-muted-foreground mt-1">
-                              {member.user.bio}
-                            </div>
-                          )}
+                <div className="space-y-6">
+                  {/* Active Members */}
+                  {projectData.users.map((member: { 
+                    id: string, 
+                    role: string, 
+                    user: { 
+                      id: string, 
+                      name: string, 
+                      email: string, 
+                      githubUsername: string, 
+                      githubProfileUrl: string, 
+                      githubAvatarUrl: string, 
+                      bio: string | null 
+                    } 
+                  }) => (
+                    <div key={member.user.id} className="flex items-center gap-4">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={member.user.githubAvatarUrl} alt={member.user.name} />
+                        <AvatarFallback>{member.user.name[0]}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="font-medium">{member.user.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {member.role.charAt(0) + member.role.slice(1).toLowerCase()}
                         </div>
-                        <div className="flex gap-2">
-                          {member.user.githubProfileUrl && (
-                            <Button variant="ghost" size="sm" asChild>
-                              <a href={member.user.githubProfileUrl} target="_blank" rel="noopener noreferrer">
-                                <Github className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
+                        {member.user.bio && (
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {member.user.bio}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        {member.user.githubProfileUrl && (
                           <Button variant="ghost" size="sm" asChild>
-                            <a href={`mailto:${member.user.email}`}>
-                              <MessageSquare className="h-4 w-4" />
+                            <a href={member.user.githubProfileUrl} target="_blank" rel="noopener noreferrer">
+                              <Github className="h-4 w-4" />
                             </a>
                           </Button>
+                        )}
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={`mailto:${member.user.email}`}>
+                            <MessageSquare className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Pending Members */}
+                  {projectData.pendingUsers?.map((member: {
+                    id: string,
+                    githubUsername: string,
+                    role: string
+                  }) => (
+                    <div key={member.id} className="flex items-center gap-4">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback>
+                          {member.githubUsername[0].toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="font-medium">@{member.githubUsername}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {member.role.charAt(0) + member.role.slice(1).toLowerCase()}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-muted-foreground">
-                    No team members listed for this project.
-                  </div>
-                )}
+                      <Button variant="ghost" size="sm" asChild>
+                        <a 
+                          href={`https://github.com/${member.githubUsername}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                        >
+                          <Github className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    </div>
+                  ))}
+
+                  {projectData.users.length === 0 && (!projectData.pendingUsers || projectData.pendingUsers.length === 0) && (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No team members listed for this project.
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

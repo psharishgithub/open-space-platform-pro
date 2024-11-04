@@ -19,12 +19,19 @@ export async function GET(
             user: true,
           },
         },
+        pendingUsers: true,
         resources: true,
         tags: {
           include: {
-            curator: true
-          }
-        }
+            curator: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        projectImages: true,
       },
     });
 

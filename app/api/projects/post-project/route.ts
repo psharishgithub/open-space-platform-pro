@@ -21,12 +21,26 @@ export async function POST(req: Request) {
       ownerId,
     } = body;
 
-    // Create project with resources
+    // Separate existing users and pending users
+    const userPromises = users.map(async (user: { githubUsername: string; role: string }) => {
+      const existingUser = await prisma.user.findUnique({
+        where: { githubUsername: user.githubUsername }
+      });
+      return {
+        ...user,
+        exists: !!existingUser
+      };
+    });
+
+    const userResults = await Promise.all(userPromises);
+    const existingUsers = userResults.filter(user => user.exists);
+    const pendingUsers = userResults.filter(user => !user.exists);
+
+    // Create project with resources and handle both existing and pending users
     const project = await prisma.project.create({
       data: {
         name,
         description,
-        // Only include githubUrl if it's not empty
         ...(githubUrl ? { githubUrl } : {}),
         demoUrl,
         techStack,
@@ -48,14 +62,22 @@ export async function POST(req: Request) {
             description: resource.description
           }))
         },
+        // Create ProjectUser records for existing users
         users: {
-          create: users.map((user: { githubUsername: string; role: string }) => ({
+          create: existingUsers.map((user) => ({
             role: user.role,
             user: {
               connect: {
                 githubUsername: user.githubUsername,
               },
             },
+          })),
+        },
+        // Create PendingProjectUser records for non-existing users
+        pendingUsers: {
+          create: pendingUsers.map((user) => ({
+            githubUsername: user.githubUsername,
+            role: user.role,
           })),
         },
       },
@@ -65,6 +87,7 @@ export async function POST(req: Request) {
             user: true,
           },
         },
+        pendingUsers: true,
         resources: true,
       },
     });
@@ -73,13 +96,19 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('Error creating project:', error);
     
-    // Handle specific Prisma errors
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       // P2002 is the error code for unique constraint violations
       if (error.code === 'P2002') {
         return NextResponse.json(
           { error: 'A project with this GitHub URL already exists' },
           { status: 409 }
+        );
+      }
+      // P2025 is the error code for records not found
+      if (error.code === 'P2025') {
+        return NextResponse.json(
+          { error: 'One or more users could not be found' },
+          { status: 404 }
         );
       }
     }
