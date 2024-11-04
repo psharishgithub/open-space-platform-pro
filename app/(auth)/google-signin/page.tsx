@@ -19,8 +19,11 @@ export default function SignUpPage() {
     const googleId = session?.googleId || "";
     const { toast } = useToast()
     const [isAllowed, setIsAllowed] = useState(false);
+    const [hasCheckedAccess, setHasCheckedAccess] = useState(false);
 
-    const checkAllowedEmail = async () => {
+    const checkAllowedEmail = useCallback(async () => {
+        if (!session?.user?.email || hasCheckedAccess) return;
+        
         try {
             const response = await fetch('/api/check-access', {
                 method: 'POST',
@@ -28,9 +31,11 @@ export default function SignUpPage() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    email: session?.user?.email
+                    email: session.user.email
                 }),
             });
+
+            setHasCheckedAccess(true);
 
             if (response.ok) {
                 setIsAllowed(true);
@@ -56,6 +61,7 @@ export default function SignUpPage() {
             }
         } catch (error) {
             console.error("Error checking access:", error);
+            setHasCheckedAccess(true);
             toast({
                 title: "Error",
                 description: "Something went wrong while checking access.",
@@ -63,19 +69,16 @@ export default function SignUpPage() {
                 duration: 5000,
             });
         }
-    };
+    }, [session?.user?.email, hasCheckedAccess, toast]);
 
     useEffect(() => {
-        console.log(JSON.stringify(session));
         if (session?.user?.name) {
             setName(session.user.name);
         }
-        if (session?.user?.email) {
+        if (session?.user?.email && !hasCheckedAccess) {
             checkAllowedEmail();
         }
-    }, [session, checkAllowedEmail]);
-
-    const memoizedCheckAllowedEmail = useCallback(checkAllowedEmail, [session, toast]);
+    }, [session, checkAllowedEmail, hasCheckedAccess]);
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setName(e.target.value);
