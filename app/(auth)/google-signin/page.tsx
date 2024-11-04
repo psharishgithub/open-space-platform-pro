@@ -20,7 +20,6 @@ export default function SignUpPage() {
     const { toast } = useToast();
     const [isAllowed, setIsAllowed] = useState(false);
     const [hasCheckedAccess, setHasCheckedAccess] = useState(false);
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
 
     const checkAllowedEmail = useCallback(async () => {
         if (!session?.user?.email || hasCheckedAccess) return;
@@ -85,9 +84,27 @@ export default function SignUpPage() {
         setName(e.target.value);
     };
 
+    const navigateToDashboard = async () => {
+        console.log("Attempting to navigate to dashboard...");
+        try {
+            // Force a hard navigation to dashboard
+            router.push("/dashboard");
+            // Add a fallback
+            setTimeout(() => {
+                console.log("Fallback: Using window.location");
+                window.location.href = "/dashboard";
+            }, 2000);
+        } catch (error) {
+            console.error("Navigation error:", error);
+            // Final fallback
+            window.location.href = "/dashboard";
+        }
+    };
+
     const handleConfirm = async () => {
         if (!session) return;
         try {
+            console.log("Sending create-user request...");
             const response = await fetch("/api/create-user", {
                 method: 'POST',
                 headers: {
@@ -100,6 +117,8 @@ export default function SignUpPage() {
                 }),
             });
 
+            console.log("Create user response status:", response.status);
+
             if (response.status === 302) {
                 toast({
                     title: "Next Step",
@@ -107,7 +126,7 @@ export default function SignUpPage() {
                     variant: "default",
                     duration: 5000,
                 });
-                await router.push("/github-link");
+                router.push("/github-link");
             } else if (response.status === 409) {
                 toast({
                     title: "Welcome Back!",
@@ -115,8 +134,9 @@ export default function SignUpPage() {
                     variant: "default",
                     duration: 5000,
                 });
+                // Wait for toast
                 await new Promise(resolve => setTimeout(resolve, 1000));
-                window.location.href = `${baseUrl}/dashboard`;
+                await navigateToDashboard();
             } else if (!response.ok) {
                 throw new Error('Network response was not ok');
             } else {
@@ -128,7 +148,7 @@ export default function SignUpPage() {
                     variant: "default",
                     duration: 5000,
                 });
-                await router.push("/github-link");
+                router.push("/github-link");
             }
         } catch (error) {
             console.error("Error:", error);
