@@ -1,28 +1,34 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
-  // Check if it's a preview deployment
-  const isPreview = process.env.VERCEL_ENV === 'preview'
-  const response = NextResponse.next()
+export async function middleware(request: NextRequest) {
+    const token = await getToken({ 
+        req: request,
+        secret: process.env.AUTH_SECRET || ''
+    });
+    
+    // Get allowed emails from environment variable
+    const allowedEmails = process.env.ALLOWED_EMAILS?.split(',') || [];
+    
+    // Check if user is authenticated and allowed
+    if (token) {
+        if (!allowedEmails.includes(token.email as string)) {
+            // Redirect to access denied page or home
+            return NextResponse.redirect(new URL('/access-denied', request.url));
+        }
+        return NextResponse.next();
+    }
 
-  // Add CORS headers
-  response.headers.set('Access-Control-Allow-Origin', '*')
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-
-  // If it's a preview deployment and the path starts with /api/projects,
-  // bypass authentication
-  if (isPreview && request.nextUrl.pathname.startsWith('/api/projects')) {
-    return response
-  }
-
-  return response
+    // Redirect to login page if not authenticated
+    return NextResponse.redirect(new URL('/google-signin', request.url));
 }
 
 export const config = {
-  matcher: [
-    '/api/:path*',
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ]
-}
+    matcher: [
+        '/dashboard/:path*',
+        '/profile/:path*',
+        '/project/:path*',
+        // Add other protected routes here
+    ]
+};
