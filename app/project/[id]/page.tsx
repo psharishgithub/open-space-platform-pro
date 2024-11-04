@@ -83,14 +83,14 @@ async function ProjectPage({ params }: { params: { id: string } }) {
     };
 
     return (
-      <div className="container mx-auto max-w-4xl p-6 space-y-6">
+      <div className="container mx-auto max-w-4xl px-4 sm:px-6 space-y-6">
 
         <Card className="border-none shadow-lg">
           <CardHeader className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <CardTitle className="text-3xl font-bold">{projectData.name}</CardTitle>
+                <div className="flex flex-wrap items-center gap-3 mb-2">
+                  <CardTitle className="text-2xl sm:text-3xl font-bold">{projectData.name}</CardTitle>
                   {projectData.status && <Badge variant="secondary">{projectData.status}</Badge>}
                   {projectData.projectType && (
                     <Badge variant={getProjectTypeBadge(projectData.projectType)}>
@@ -98,7 +98,7 @@ async function ProjectPage({ params }: { params: { id: string } }) {
                     </Badge>
                   )}
                 </div>
-                <CardDescription className="mt-2 text-lg">
+                <CardDescription className="mt-2 text-base sm:text-lg">
                   {projectData.description || 'No description available'}
                 </CardDescription>
               </div>
@@ -117,7 +117,7 @@ async function ProjectPage({ params }: { params: { id: string } }) {
 
               <div className="flex gap-4">
                 {projectData.demoUrl && (
-                  <Button variant="default" className="gap-2" asChild>
+                  <Button variant="default" className="gap-2 w-full sm:w-auto" asChild>
                     <a href={projectData.demoUrl} target="_blank" rel="noopener noreferrer">
                       <Globe className="h-4 w-4" />
                       View Demo
@@ -125,7 +125,7 @@ async function ProjectPage({ params }: { params: { id: string } }) {
                   </Button>
                 )}
                 {projectData.githubUrl && (
-                  <Button variant="outline" className="gap-2" asChild>
+                  <Button variant="outline" className="gap-2 w-full sm:w-auto" asChild>
                     <a href={projectData.githubUrl} target="_blank" rel="noopener noreferrer">
                       <Github className="h-4 w-4" />
                       Source Code
@@ -138,11 +138,13 @@ async function ProjectPage({ params }: { params: { id: string } }) {
         </Card>
 
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="team">Team</TabsTrigger>
-            <TabsTrigger value="academic">Academic</TabsTrigger>
-            <TabsTrigger value="resources">Resources</TabsTrigger>
+          <TabsList className="w-full flex overflow-x-auto hide-scrollbar">
+            <div className="flex min-w-full sm:grid sm:grid-cols-4">
+              <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
+              <TabsTrigger value="team" className="flex-1">Team</TabsTrigger>
+              <TabsTrigger value="academic" className="flex-1">Academic</TabsTrigger>
+              <TabsTrigger value="resources" className="flex-1">Resources</TabsTrigger>
+            </div>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -242,7 +244,7 @@ async function ProjectPage({ params }: { params: { id: string } }) {
                       bio: string | null 
                     } 
                   }) => (
-                    <div key={member.user.id} className="flex items-center gap-4">
+                    <div key={member.user.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                       <Avatar className="h-12 w-12">
                         <AvatarImage src={member.user.githubAvatarUrl} alt={member.user.name} />
                         <AvatarFallback>{member.user.name[0]}</AvatarFallback>
@@ -258,7 +260,7 @@ async function ProjectPage({ params }: { params: { id: string } }) {
                           </div>
                         )}
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 mt-2 sm:mt-0">
                         {member.user.githubProfileUrl && (
                           <Button variant="ghost" size="sm" asChild>
                             <a href={member.user.githubProfileUrl} target="_blank" rel="noopener noreferrer">
@@ -429,6 +431,10 @@ async function ProjectPage({ params }: { params: { id: string } }) {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <div className="flex justify-center py-8">
+          <span className="text-xs text-muted-foreground/50">Made with Open Space</span>
+        </div>
       </div>
     );
   } catch (error) {

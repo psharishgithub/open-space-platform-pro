@@ -122,7 +122,7 @@ export default function DevFestPage() {
           )}
           {!session ? (
             <Link href="/devfest-signin">
-              <Button disabled={!votingStatus.isOpen}>Sign in to Vote</Button>
+              <Button >Sign in to Vote</Button>
             </Link>
           ) : (
             <Button
