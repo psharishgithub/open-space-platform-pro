@@ -29,7 +29,7 @@ model User {
   name              String
   bio               String?
   email             String         @unique
-  githubUsername    String         @unique
+  githubUsername    String?        @unique
   githubProfileUrl  String?
   githubAvatarUrl   String?
   role              UserRole       @default(INDIVIDUAL) 
@@ -58,6 +58,7 @@ model Project {
   tags              ProjectTag[]         
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
+  votes     Vote[]
 }
 
 model ProjectTag {
@@ -123,4 +124,22 @@ model ProjectResource {
   updatedAt   DateTime @updatedAt
 
   @@index([projectId])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  projectId String
+  userEmail String
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id])
+
+  @@unique([projectId, userEmail])
+}
+
+model VotingStatus {
+  id        String   @id @default("voting_status")
+  isOpen    Boolean  @default(false)
+  startTime DateTime?
+  endTime   DateTime?
+  updatedAt DateTime @updatedAt
 }
