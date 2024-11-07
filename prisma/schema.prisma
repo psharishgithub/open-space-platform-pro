@@ -29,7 +29,7 @@ model User {
   name              String
   bio               String?
   email             String         @unique
-  githubUsername    String         @unique
+  githubUsername    String?        @unique
   githubProfileUrl  String?
   githubAvatarUrl   String?
   role              UserRole       @default(INDIVIDUAL) 

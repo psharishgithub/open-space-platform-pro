@@ -17,7 +17,8 @@ import {
   Image as ImageIcon,
   Presentation,
   ScrollText,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Clock
 } from 'lucide-react';
 import Image from 'next/image'
 export const dynamic = 'force-dynamic';
@@ -36,8 +37,7 @@ async function getProjectData(id: string) {
   if (!baseUrl) throw new Error('API base URL is not configured');
 
   const response = await fetch(`${baseUrl}/api/projects/${id}`, {
-    cache: 'no-store',
-    next: { revalidate: 0 }
+    cache: 'no-store'
   });
 
   if (!response.ok) {
@@ -66,25 +66,31 @@ async function ProjectPage({ params }: { params: { id: string } }) {
   try {
     const project = await getProjectData(params.id);
 
+    console.log('Project Data:', {
+      users: project.users,
+      pendingUsers: project.pendingUsers
+    });
+
     const projectData = {
       ...project,
       projectImages: project.projectImages || [],
       techStack: project.techStack || [],
       users: project.users || [],
+      pendingUsers: project.pendingUsers || [],
       tags: project.tags || [],
       resources: project.resources || [],
       keyFeatures: project.keyFeatures || [],
     };
 
     return (
-      <div className="container mx-auto max-w-4xl p-6 space-y-6">
+      <div className="container mx-auto max-w-4xl px-4 sm:px-6 space-y-6">
 
         <Card className="border-none shadow-lg">
           <CardHeader className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <CardTitle className="text-3xl font-bold">{projectData.name}</CardTitle>
+                <div className="flex flex-wrap items-center gap-3 mb-2">
+                  <CardTitle className="text-2xl sm:text-3xl font-bold">{projectData.name}</CardTitle>
                   {projectData.status && <Badge variant="secondary">{projectData.status}</Badge>}
                   {projectData.projectType && (
                     <Badge variant={getProjectTypeBadge(projectData.projectType)}>
@@ -92,7 +98,7 @@ async function ProjectPage({ params }: { params: { id: string } }) {
                     </Badge>
                   )}
                 </div>
-                <CardDescription className="mt-2 text-lg">
+                <CardDescription className="mt-2 text-base sm:text-lg">
                   {projectData.description || 'No description available'}
                 </CardDescription>
               </div>
@@ -111,7 +117,7 @@ async function ProjectPage({ params }: { params: { id: string } }) {
 
               <div className="flex gap-4">
                 {projectData.demoUrl && (
-                  <Button variant="default" className="gap-2" asChild>
+                  <Button variant="default" className="gap-2 w-full sm:w-auto" asChild>
                     <a href={projectData.demoUrl} target="_blank" rel="noopener noreferrer">
                       <Globe className="h-4 w-4" />
                       View Demo
@@ -119,7 +125,7 @@ async function ProjectPage({ params }: { params: { id: string } }) {
                   </Button>
                 )}
                 {projectData.githubUrl && (
-                  <Button variant="outline" className="gap-2" asChild>
+                  <Button variant="outline" className="gap-2 w-full sm:w-auto" asChild>
                     <a href={projectData.githubUrl} target="_blank" rel="noopener noreferrer">
                       <Github className="h-4 w-4" />
                       Source Code
@@ -132,11 +138,13 @@ async function ProjectPage({ params }: { params: { id: string } }) {
         </Card>
 
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="team">Team</TabsTrigger>
-            <TabsTrigger value="academic">Academic</TabsTrigger>
-            <TabsTrigger value="resources">Resources</TabsTrigger>
+          <TabsList className="w-full flex overflow-x-auto hide-scrollbar">
+            <div className="flex min-w-full sm:grid sm:grid-cols-4">
+              <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
+              <TabsTrigger value="team" className="flex-1">Team</TabsTrigger>
+              <TabsTrigger value="academic" className="flex-1">Academic</TabsTrigger>
+              <TabsTrigger value="resources" className="flex-1">Resources</TabsTrigger>
+            </div>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -221,47 +229,90 @@ async function ProjectPage({ params }: { params: { id: string } }) {
                 <CardDescription>Meet the people behind the project</CardDescription>
               </CardHeader>
               <CardContent>
-                {projectData.users.length > 0 ? (
-                  <div className="grid gap-6">
-                    {projectData.users.map((member: { id: string, role: string, user: { id: string, name: string, email: string, githubUsername: string, githubProfileUrl: string, githubAvatarUrl: string, bio: string | null } }) => (
-                      <div key={member.user.id} className="flex items-center gap-4">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={member.user.githubAvatarUrl} alt={member.user.name} />
-                          <AvatarFallback>{member.user.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="font-medium">{member.user.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {member.role.charAt(0) + member.role.slice(1).toLowerCase()}
-                          </div>
-                          {member.user.bio && (
-                            <div className="text-sm text-muted-foreground mt-1">
-                              {member.user.bio}
-                            </div>
-                          )}
+                <div className="space-y-6">
+                  {/* Active Members */}
+                  {projectData.users.map((member: { 
+                    id: string, 
+                    role: string, 
+                    user: { 
+                      id: string, 
+                      name: string, 
+                      email: string, 
+                      githubUsername: string, 
+                      githubProfileUrl: string, 
+                      githubAvatarUrl: string, 
+                      bio: string | null 
+                    } 
+                  }) => (
+                    <div key={member.user.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={member.user.githubAvatarUrl} alt={member.user.name} />
+                        <AvatarFallback>{member.user.name[0]}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="font-medium">{member.user.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {member.role.charAt(0) + member.role.slice(1).toLowerCase()}
                         </div>
-                        <div className="flex gap-2">
-                          {member.user.githubProfileUrl && (
-                            <Button variant="ghost" size="sm" asChild>
-                              <a href={member.user.githubProfileUrl} target="_blank" rel="noopener noreferrer">
-                                <Github className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
+                        {member.user.bio && (
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {member.user.bio}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2 mt-2 sm:mt-0">
+                        {member.user.githubProfileUrl && (
                           <Button variant="ghost" size="sm" asChild>
-                            <a href={`mailto:${member.user.email}`}>
-                              <MessageSquare className="h-4 w-4" />
+                            <a href={member.user.githubProfileUrl} target="_blank" rel="noopener noreferrer">
+                              <Github className="h-4 w-4" />
                             </a>
                           </Button>
+                        )}
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={`mailto:${member.user.email}`}>
+                            <MessageSquare className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Pending Members */}
+                  {projectData.pendingUsers?.map((member: {
+                    id: string,
+                    githubUsername: string,
+                    role: string
+                  }) => (
+                    <div key={member.id} className="flex items-center gap-4">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback>
+                          {member.githubUsername[0].toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="font-medium">@{member.githubUsername}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {member.role.charAt(0) + member.role.slice(1).toLowerCase()}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-muted-foreground">
-                    No team members listed for this project.
-                  </div>
-                )}
+                      <Button variant="ghost" size="sm" asChild>
+                        <a 
+                          href={`https://github.com/${member.githubUsername}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                        >
+                          <Github className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    </div>
+                  ))}
+
+                  {projectData.users.length === 0 && (!projectData.pendingUsers || projectData.pendingUsers.length === 0) && (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No team members listed for this project.
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -380,6 +431,10 @@ async function ProjectPage({ params }: { params: { id: string } }) {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <div className="flex justify-center py-8">
+          <span className="text-xs text-muted-foreground/50">Made with Open Space</span>
+        </div>
       </div>
     );
   } catch (error) {

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Loader2, X, Plus, Github, FileCode, Users, Rocket, LibraryBig, ImagePlus, Trash2, Upload, Send, FileText, Presentation, ScrollText, Link } from 'lucide-react'
+import { Loader2, X, Plus, Github, FileCode, FileCode2, Users, Rocket, LibraryBig, ImagePlus, Trash2, Upload, Send, FileText, Presentation, ScrollText, Link, Lock } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useUser } from '@/components/user-context'
@@ -62,6 +62,33 @@ const COMMON_TECHNOLOGIES: Technology[] = [
   { value: "prisma", label: "Prisma" },
 
 ]
+
+const CHAR_LIMITS = {
+  name: { min: 3, max: 100 },
+  description: { min: 50, max: 500 },
+  problemStatement: { min: 50, max: 1000 },
+  featureDescription: { min: 10, max: 200 },
+  resourceTitle: { min: 3, max: 100 },
+  resourceDescription: { min: 0, max: 300 }
+}
+
+const isValidPostImageUrl = (url: string): boolean => {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.hostname === 'i.postimg.cc' && /\.(jpg|jpeg|png|gif)$/i.test(parsedUrl.pathname);
+  } catch {
+    return false;
+  }
+};
+
+const verifyGithubUsername = async (username: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`https://api.github.com/users/${username}`);
+    return response.status === 200;
+  } catch {
+    return false;
+  }
+};
 
 export default function UploadProjectsPage() {
   const { user } = useUser();
@@ -176,9 +203,24 @@ export default function UploadProjectsPage() {
       projectUsers: string;
     }> = {};
 
-    if (!project.name.trim()) formErrors.name = 'Project name is required'
-    if (!project.description.trim()) formErrors.description = 'Description is required'
-    if (!project.problemStatement.trim()) formErrors.problemStatement = 'Problem statement is required'
+    if (!project.name.trim()) {
+      formErrors.name = 'Project name is required'
+    } else if (project.name.length < CHAR_LIMITS.name.min || project.name.length > CHAR_LIMITS.name.max) {
+      formErrors.name = `Project name must be between ${CHAR_LIMITS.name.min} and ${CHAR_LIMITS.name.max} characters`
+    }
+
+    if (!project.description.trim()) {
+      formErrors.description = 'Description is required'
+    } else if (project.description.length < CHAR_LIMITS.description.min || project.description.length > CHAR_LIMITS.description.max) {
+      formErrors.description = `Description must be between ${CHAR_LIMITS.description.min} and ${CHAR_LIMITS.description.max} characters`
+    }
+
+    if (!project.problemStatement.trim()) {
+      formErrors.problemStatement = 'Problem statement is required'
+    } else if (project.problemStatement.length < CHAR_LIMITS.problemStatement.min || project.problemStatement.length > CHAR_LIMITS.problemStatement.max) {
+      formErrors.problemStatement = `Problem statement must be between ${CHAR_LIMITS.problemStatement.min} and ${CHAR_LIMITS.problemStatement.max} characters`
+    }
+
     if (!project.projectType) formErrors.projectType = 'Project type is required'
     if (!project.status) formErrors.status = 'Project status is required'
     if (project.keyFeatures.filter(f => f.trim()).length === 0) {
@@ -209,13 +251,52 @@ export default function UploadProjectsPage() {
     setNewProjectUser(prev => ({ ...prev, [field]: value }))
   }
 
-  const addProjectUser = () => {
-    if (newProjectUser.githubUsername) {
-      setProjectUsers(prev => [...prev, { ...newProjectUser, id: Date.now().toString() }])
-      setNewProjectUser({ githubUsername: '', role: 'CONTRIBUTOR' })
-      setErrors(prev => ({ ...prev, projectUsers: undefined }))
+  const addProjectUser = async () => {
+    if (!newProjectUser.githubUsername) {
+      toast({
+        title: "Missing username",
+        description: "Please enter a GitHub username",
+        variant: "destructive"
+      });
+      return;
     }
-  }
+
+    if (projectUsers.some(user => user.githubUsername.toLowerCase() === newProjectUser.githubUsername.toLowerCase())) {
+      toast({
+        title: "Duplicate user",
+        description: "This user has already been added to the project",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const loadingToast = toast({
+      title: "Verifying username",
+      description: "Please wait...",
+    });
+
+    const isValid = await verifyGithubUsername(newProjectUser.githubUsername);
+    
+    loadingToast.dismiss();
+
+    if (!isValid) {
+      toast({
+        title: "Invalid username",
+        description: "Please enter a valid GitHub username",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setProjectUsers(prev => [...prev, { ...newProjectUser, id: Date.now().toString() }]);
+    setNewProjectUser({ githubUsername: '', role: 'CONTRIBUTOR' });
+    setErrors(prev => ({ ...prev, projectUsers: undefined }));
+
+    toast({
+      title: "Team member added",
+      description: `@${newProjectUser.githubUsername} has been added to the project`,
+    });
+  };
 
   const removeProjectUser = (id: string) => {
     setProjectUsers(prev => prev.filter(projectUser => projectUser.id !== id))
@@ -357,10 +438,14 @@ export default function UploadProjectsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Github className="h-8 w-8" />
+              {enableGithub ? (
+                <FileCode2 className="h-8 w-8" />
+              ) : (
+                <Github className="h-8 w-8" />
+              )}
               <div>
                 <CardTitle className="text-3xl">Post Your Project</CardTitle>
-                <CardDescription>Share your work with the community</CardDescription>
+                <CardDescription>Share your work</CardDescription>
               </div>
             </div>
             <Button 
@@ -426,7 +511,13 @@ export default function UploadProjectsPage() {
                   <Switch
                     id="enableGithub"
                     checked={enableGithub}
-                    onCheckedChange={setEnableGithub}
+                    onCheckedChange={(checked) => {
+                      setEnableGithub(checked);
+                      if (checked && project.githubUrl) {
+                        // Clear GitHub URL when switching to private repository
+                        setProject(prev => ({ ...prev, githubUrl: '' }));
+                      }
+                    }}
                   />
                 </div>
 
@@ -462,7 +553,12 @@ export default function UploadProjectsPage() {
                       value={project.name}
                       onChange={handleChange}
                       className={errors.name ? 'border-destructive' : ''}
+                      maxLength={CHAR_LIMITS.name.max}
                     />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>{project.name.length}/{CHAR_LIMITS.name.max} characters</span>
+                      <span>Min: {CHAR_LIMITS.name.min} characters</span>
+                    </div>
                     {errors.name && <p className="text-destructive text-xs mt-1">{errors.name}</p>}
                   </div>
 
@@ -475,7 +571,12 @@ export default function UploadProjectsPage() {
                       onChange={handleChange}
                       className={`h-24 ${errors.description ? 'border-destructive' : ''}`}
                       placeholder="Describe your project..."
+                      maxLength={CHAR_LIMITS.description.max}
                     />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>{project.description.length}/{CHAR_LIMITS.description.max} characters</span>
+                      <span>Min: {CHAR_LIMITS.description.min} characters</span>
+                    </div>
                     {errors.description && <p className="text-destructive text-xs mt-1">{errors.description}</p>}
                   </div>
 
@@ -515,7 +616,13 @@ export default function UploadProjectsPage() {
                       onChange={handleChange}
                       className="h-24"
                       placeholder="Describe the problem your project aims to solve..."
+                      maxLength={CHAR_LIMITS.problemStatement.max}
                     />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>{project.problemStatement.length}/{CHAR_LIMITS.problemStatement.max} characters</span>
+                      <span>Min: {CHAR_LIMITS.problemStatement.min} characters</span>
+                    </div>
+                    {errors.problemStatement && <p className="text-destructive text-xs mt-1">{errors.problemStatement}</p>}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -661,7 +768,10 @@ export default function UploadProjectsPage() {
                     placeholder="GitHub Username"
                     className="flex-1"
                   />
-                  <Select onValueChange={(value) => handleProjectUserChange(value, 'role')} value={newProjectUser.role}>
+                  <Select 
+                    onValueChange={(value) => handleProjectUserChange(value, 'role')} 
+                    value={newProjectUser.role}
+                  >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
@@ -670,7 +780,11 @@ export default function UploadProjectsPage() {
                       <SelectItem value="OWNER">Owner</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button type="button" onClick={addProjectUser} variant="outline">
+                  <Button 
+                    type="button" 
+                    onClick={() => void addProjectUser()} 
+                    variant="outline"
+                  >
                     <Plus className="mr-2 h-4 w-4" /> Add User
                   </Button>
                 </div>
@@ -750,21 +864,30 @@ export default function UploadProjectsPage() {
                         <Input
                           value={newResource.url}
                           onChange={(e) => setNewResource(prev => ({ ...prev, url: e.target.value }))}
-                          placeholder="https://..."
+                          placeholder="https://i.postimg.cc/your-image-id/image.jpg"
                         />
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          <p>Please use <a href="https://postimages.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">postimages.org</a> to upload your image</p>
+                          <p>Only direct image URLs from i.postimg.cc are accepted</p>
+                          <p>Example: https://i.postimg.cc/image-id/image.jpg</p>
+                        </div>
                         {newResource.type === 'image' && newResource.url && (
-                          <div className="relative aspect-video overflow-hidden rounded-lg border bg-muted">
-                            <Image
-                              src={newResource.url}
-                              alt="Preview"
-                              fill
-                              className="object-cover"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = '/placeholder-image.png';
-                              }}
-                            />
-                          </div>
+                          isValidPostImageUrl(newResource.url) ? (
+                            <div className="relative aspect-video overflow-hidden rounded-lg border bg-muted">
+                              <Image
+                                src={newResource.url}
+                                alt="Preview"
+                                fill
+                                className="object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = '/placeholder-image.png';
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <p className="text-destructive text-xs">Please provide a valid postimages.org URL</p>
+                          )
                         )}
                       </div>
 
@@ -774,7 +897,12 @@ export default function UploadProjectsPage() {
                           value={newResource.title}
                           onChange={(e) => setNewResource(prev => ({ ...prev, title: e.target.value }))}
                           placeholder="Resource title"
+                          maxLength={CHAR_LIMITS.resourceTitle.max}
                         />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>{newResource.title.length}/{CHAR_LIMITS.resourceTitle.max} characters</span>
+                          <span>Min: {CHAR_LIMITS.resourceTitle.min} characters</span>
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -783,7 +911,12 @@ export default function UploadProjectsPage() {
                           value={newResource.description}
                           onChange={(e) => setNewResource(prev => ({ ...prev, description: e.target.value }))}
                           placeholder="Describe this resource"
+                          maxLength={CHAR_LIMITS.resourceDescription.max}
                         />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>{newResource.description.length}/{CHAR_LIMITS.resourceDescription.max} characters</span>
+                          <span>Optional</span>
+                        </div>
                       </div>
 
                       <Button
@@ -792,6 +925,15 @@ export default function UploadProjectsPage() {
                             toast({
                               title: "Missing information",
                               description: "Please provide a URL and title",
+                              variant: "destructive"
+                            })
+                            return
+                          }
+
+                          if (newResource.type === 'image' && !isValidPostImageUrl(newResource.url)) {
+                            toast({
+                              title: "Invalid image URL",
+                              description: "Please use a valid postimages.org URL (i.postimg.cc)",
                               variant: "destructive"
                             })
                             return

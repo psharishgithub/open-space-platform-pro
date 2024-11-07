@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FaGoogle } from "react-icons/fa";
@@ -14,7 +14,7 @@ export default function DevFestSignInPage() {
     const userEmail = session?.user?.email || "";
     const googleId = session?.googleId || "";
 
-    const handleUserCreation = async () => {
+    const handleUserCreation = useCallback(async () => {
         if (!session) return;
         
         try {
@@ -32,7 +32,7 @@ export default function DevFestSignInPage() {
 
             if (response.ok || response.status === 409) {
                 toast.success("Successfully signed in!");
-                router.push("/devfest"); // Redirect back to DevFest page
+                router.push("/devfest"); 
             } else {
                 throw new Error('Failed to create user');
             }
@@ -40,13 +40,13 @@ export default function DevFestSignInPage() {
             console.error("Error:", error);
             toast.error("Failed to sign in. Please try again.");
         }
-    };
+    }, [session, router, userEmail, googleId]);
 
     useEffect(() => {
         if (session?.user) {
             handleUserCreation();
         }
-    }, [session, handleUserCreation, router, userEmail, googleId]);
+    }, [session, handleUserCreation]);
 
     return (
         <main className="w-screen h-screen flex items-center justify-center">
